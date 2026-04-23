@@ -1,247 +1,116 @@
-![Xzp Banner](./icon/banner-xzp.png)
+<p align="center">
+  <img src="./icon/banner-xzp.png" alt="Xzp Banner" width="100%" />
+</p>
 
 <h1 align="center">Xzp</h1>
 
 <p align="center">
-  Visual CLI para Termux y Linux con contexto de proyecto, exploracion guiada,
-  arboles legibles, favoritos persistentes, auditoria y flujos mas seguros.
+  <b>Una interfaz de línea de comandos visual y técnica diseñada para la eficiencia en entornos Termux y Linux.</b><br>
+  <i>Optimización de flujos de trabajo, auditoría de proyectos y gestión de contexto con un enfoque en la seguridad y la sobriedad.</i>
 </p>
 
 <p align="center">
-  <img alt="platform" src="https://img.shields.io/badge/platform-Termux%20%7C%20Linux-111111?style=flat-square&labelColor=F97316&color=1F2937">
-  <img alt="package" src="https://img.shields.io/badge/package-%40nyxur%2Fxzp-111111?style=flat-square&labelColor=0F766E&color=1F2937">
-  <img alt="version" src="https://img.shields.io/badge/version-1.0.1-111111?style=flat-square&labelColor=2563EB&color=1F2937">
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Termux%20%7C%20Linux-111111?style=flat-square&labelColor=F97316&color=1F2937">
+  <img alt="Package" src="https://img.shields.io/badge/package-%40nyxur%2Fxzp-111111?style=flat-square&labelColor=0F766E&color=1F2937">
+  <img alt="Version" src="https://img.shields.io/badge/version-1.0.1-111111?style=flat-square&labelColor=2563EB&color=1F2937">
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-111111?style=flat-square&labelColor=334155&color=1F2937">
 </p>
 
-## Que Es Xzp
+---
 
-Xzp no intenta esconder la terminal. La vuelve mas clara, mas repetible y mas segura para trabajo real en proyectos.
+## Presentación
 
-Sirve para:
+**Xzp** no es solo una herramienta de terminal; es un ecosistema utilitario que aporta claridad y estructura al desarrollo en entornos móviles y de escritorio. Diseñado para desarrolladores que exigen precisión, Xzp facilita la navegación por proyectos complejos, la gestión de dependencias y la auditoría de seguridad sin sacrificar la potencia de la línea de comandos nativa.
 
-- detectar en que stack estas
-- guardar rutas frecuentes como favoritos
-- buscar archivos con exclusiones persistentes
-- comparar arboles y resumir estructura
-- instalar dependencias con validaciones y rescate seguro
-- revisar fugas y preparar reportes reproducibles
+### Capacidades Principales
 
-## Instalacion
+*   **Análisis de Contexto**: Detección automática de stacks tecnológicos y perfiles de proyecto.
+*   **Exploración Inteligente**: Búsqueda semántica avanzada y visualización de estructuras de directorios mediante árboles comparativos.
+*   **Gestión de Favoritos**: Sistema persistente para el acceso rápido a rutas críticas de desarrollo.
+*   **Seguridad Integrada**: Auditoría de salud del sistema (`doctor`), inspección profunda y reportes de error con redacción automática de datos sensibles.
+*   **Modo Agente**: Interfaz optimizada para la integración con agentes de IA y flujos de automatización mediante salidas JSON estables.
 
-Global:
+---
+
+## Instalación y Configuración
+
+### Instalación Global
+Para integrar Xzp en su flujo de trabajo global, utilice el gestor de paquetes npm:
 
 ```bash
 npm i -g @nyxur/xzp
 ```
 
-Local desde el repo:
+### Ejecución Local
+Si prefiere ejecutar la herramienta directamente desde el repositorio:
 
 ```bash
 node ./bin/xzp --help
 ```
 
-## Primeros Comandos
+### Archivos de Configuración
+Xzp mantiene su estado y preferencias en: `~/.config/xzp/config.json`. Este archivo gestiona versiones de esquema, favoritos, historial de contextos y exclusiones de búsqueda.
+
+---
+
+## Guía de Comandos Rápidos
+
+| Categoría | Funcionalidad | Comando |
+| :--- | :--- | :--- |
+| **Interfaz** | Menú visual interactivo y ajustes | `xzp -m` |
+| **Contexto** | Perfilado de proyecto y favoritos | `xzp -x --profile` |
+| **Exploración** | Búsqueda semántica y árboles | `xzp -b` / `xzp -t` |
+| **Clipboard** | Gestión avanzada del portapapeles | `xzp -c` / `xzp -p` |
+| **Auditoría** | Diagnóstico de salud e inspección | `xzp --doctor` |
+| **Seguridad** | Generación de reportes redactados | `xzp --report-error` |
+
+---
+
+## Documentación Detallada
+
+Para una comprensión profunda de los principios y el funcionamiento interno de Xzp, consulte nuestra documentación técnica:
+
+*   📘 **[Guía de Identidad Visual (Branding)](./.internal-docs/BRANDING.md)**: Principios de diseño y estética.
+*   📋 **[Lista de Verificación de Lanzamientos](./.internal-docs/RELEASE_CHECKLIST.md)**: Protocolos de publicación y calidad.
+*   🛠️ **[Revisión de Entorno: Termux](./.internal-docs/TERMUX_REVIEW.md)**: Optimizaciones específicas para Android.
+*   🐧 **[Revisión de Entorno: Linux](./.internal-docs/LINUX_REVIEW.md)**: Compatibilidad y comportamiento en escritorio.
+*   📈 **[Registro de Evolución y Continuidad](./.internal-docs/PLAN_CONTINUACION.md)**: Hoja de ruta y progreso del proyecto.
+*   🔍 **[Resumen de Estado y Contexto](./.internal-docs/CORTE_CONTEXTO_ACTUAL.md)**: Detalles técnicos sobre seguridad y arquitectura.
+
+---
+
+## Flujos de Trabajo Especializados
+
+### Integración con Agentes de IA
+Xzp incluye un **Modo Agente** diseñado para ser consumido por procesos automatizados:
 
 ```bash
-xzp -m
-xzp -x --profile
-xzp -b "api client" --semantic --exclude dist --save-exclude
-xzp -t . --summary --compare src
-xzp --doctor
-xzp -i
-xzp -r
-```
-
-<p align="center">
-  <img src="./icon/logo-transparent-xzp.png" alt="Xzp icon" width="124" />
-</p>
-
-## Comandos Basicos
-
-| Area | Uso | Comandos |
-| --- | --- | --- |
-| Menu | navegar y ajustar la experiencia | `xzp -m` |
-| Contexto | detectar stack, perfil y favoritos | `xzp -x`, `xzp -x --profile`, `xzp -x --save-favorite nombre` |
-| Exploracion | buscar y comparar estructura | `xzp -b`, `xzp -t`, `xzp -t --compare` |
-| Clipboard | copiar, pegar y limpiar | `xzp -c`, `xzp -p`, `xzp -k`, `xzp -K` |
-| Auditoria | salud, release e inspeccion | `xzp --doctor`, `xzp --inspect`, `xzp -v` |
-| Seguridad | reportes redactados | `xzp --report-error` |
-| Safe mode | instalar y abrir entorno seguro | `xzp -i`, `xzp -r` |
-
-## Flujos Rapidos
-
-### Contexto y favoritos
-
-Guardar favorito del proyecto actual:
-
-```bash
-xzp -x --save-favorite backend
-```
-
-Listar favoritos:
-
-```bash
-xzp -x --list-favorites
-```
-
-Eliminar favorito:
-
-```bash
-xzp -x --remove-favorite backend
-```
-
-### Busqueda y arboles
-
-Busqueda semantica con exclusiones persistentes:
-
-```bash
-xzp -b "api client" --semantic --exclude dist --exclude coverage --save-exclude
-```
-
-Arbol con resumen:
-
-```bash
-xzp -t . --depth 3 --summary
-```
-
-Arbol comparativo:
-
-```bash
-xzp -t . --compare src --summary
-```
-
-### Agent mode
-
-Modo pensado para AI agents o automatizaciones:
-
-```bash
+# Activar modo agente
 xzp --agent-on
-xzp --agent-status
+
+# Ejecutar comandos con salida JSON pura
 XZP_AGENT_MODE=1 xzp --doctor
-XZP_AGENT_MODE=1 xzp -b "api client" --semantic
 ```
 
-Cuando esta activo:
+### Recetas por Lenguaje
+Xzp adapta su comportamiento según el lenguaje detectado:
+*   **Node.js**: `xzp -b "package" --scope actual`
+*   **Python**: `xzp -b "requirements" --scope actual`
+*   **PHP**: `xzp -b "composer" --scope actual`
 
-- prefiere JSON por defecto
-- evita prompts en comandos compatibles
-- usa defaults seguros para flujos no interactivos
+---
 
-## Recetas Por Lenguaje
+## Desarrollo y Contribución
 
-### Node
+Para asegurar la estabilidad del proyecto, contamos con una suite de pruebas completa:
 
 ```bash
-xzp -x --profile
-xzp -b "package" --scope actual
-xzp -i
-xzp -r
-```
-
-### Python
-
-```bash
-xzp -x --profile
-xzp -b "requirements" --scope actual
-xzp -i
-xzp -r
-```
-
-### PHP
-
-```bash
-xzp -x --profile
-xzp -b "composer" --scope actual
-xzp -i
-xzp -r
-```
-
-### Go, Rust, Java y Ruby
-
-```bash
-xzp -x --profile
-xzp -t . --depth 2 --summary
-xzp -i
-xzp -r
-```
-
-## Install Seguro
-
-`xzp -i` hace tres cosas antes de considerarse completo:
-
-1. valida el proyecto y el modo de instalacion detectado
-2. intenta instalacion normal o segura segun el estado guardado
-3. ejecuta un post-check y persiste el resultado en config
-
-Esto ayuda a distinguir entre:
-
-- instalacion correcta
-- instalacion terminada con alertas
-- proyecto que requiere rescate seguro
-
-## Reportes y Configuracion
-
-Los snapshots y reportes de error:
-
-- redactan tokens comunes
-- ocultan rutas personales como `~`
-- recortan texto libre y stacks muy largos
-- mantienen salida JSON usable para scripts
-
-La configuracion vive en:
-
-```text
-~/.config/xzp/config.json
-```
-
-Incluye:
-
-- `schemaVersion`
-- `favorites.paths`
-- `history.recentContexts`
-- `search.savedExcludes`
-- `install.reports`
-- `menu.visualMode`
-
-## Troubleshooting
-
-### `xzp -i` falla en Termux
-
-- revisa mirrors con `termux-change-repo`
-- corre `pkg update`
-- confirma que el proyecto este dentro de Android storage si el rescate seguro lo requiere
-
-### `xzp -x` no detecta proyecto
-
-- entra al root real del proyecto
-- usa `xzp -t . --depth 2`
-- usa `xzp -b "package" --scope actual` o el equivalente del stack
-
-### JSON mezclado con ruido
-
-- usa `XZP_OUTPUT_FORMAT=json`
-- evita comandos interactivos si el flujo va a scripts
-
-### El menu se ve muy grande en terminal estrecha
-
-- entra a `xzp -m`
-- abre `Ajustes y funciones`
-- cambia `Modo visual del menu` a `compact`
-
-## Desarrollo
-
-Tests:
-
-```bash
+# Ejecutar tests unitarios y de integración
 npm test
 ```
 
-Verificacion rapida:
-
-```bash
-node ./bin/xzp --help
-node ./bin/xzp -x --profile
-node ./bin/xzp -b "api client" --semantic --exclude dist
-node ./bin/xzp -t . --summary
-node ./bin/xzp -v
-```
+<p align="center">
+  <img src="./icon/logo-transparent-xzp.png" alt="Xzp Logo" width="80" />
+  <br>
+  <sub>Desarrollado con un enfoque en la sobriedad y la eficiencia técnica.</sub>
+</p>
