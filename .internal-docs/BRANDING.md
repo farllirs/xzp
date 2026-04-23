@@ -1,55 +1,33 @@
-# Guia De Branding Xzp
+# Guía de Identidad Visual: Xzp
 
-## Direccion
+Esta guía define los principios visuales y de comunicación para Xzp. El objetivo es mantener una estética coherente que refleje la naturaleza técnica y utilitaria de la herramienta.
 
-Xzp debe sentirse:
+## Concepto y Dirección
+Xzp se define por su funcionalidad y claridad. La identidad debe transmitir:
+- **Precisión técnica**: Enfoque en la utilidad por encima de la decoración.
+- **Legibilidad**: Optimización para entornos de terminal y lectura rápida.
+- **Sobriedad**: Una estética profesional que evite distracciones visuales innecesarias.
 
-- tecnico
-- utilitario
-- legible en terminal
-- sobrio pero con identidad propia
+**Lo que debemos evitar:**
+- Estilos excesivamente llamativos o colores neón sin propósito.
+- Interfaces recargadas que dificulten la interpretación de datos.
+- Elementos que imiten dashboards web genéricos; Xzp es una herramienta de terminal nativa.
 
-No debe verse:
+## Paleta de Colores
+La selección de colores busca un equilibrio entre contraste y descanso visual:
+- **Fondo Principal (Deep Ink)**: \`#0F172A\` - Base para interfaces oscuras.
+- **Acento Primario (Signal Cyan)**: \`#0891B2\` - Para resaltar información clave y estados activos.
+- **Alertas y Advertencias (Forge Amber)**: \`#D97706\` - Uso exclusivo para avisos importantes.
+- **Texto y Detalles (Mist/Graphite)**: \`#E2E8F0\` y \`#334155\` - Para jerarquía de contenido.
 
-- jugueton
-- recargado
-- neon sin control
-- generico tipo dashboard web
+## Tipografía
+- **Documentación y Web**: Tipografías sans-serif limpias que prioricen la lectura de bloques de texto.
+- **Terminal y Snapshots**: Fuentes monoespaciadas compactas. Se debe evitar el uso de negritas o cursivas decorativas si no aportan valor semántico.
 
-## Paleta
+## Logotipo y Símbolo
+El logotipo se basa en una \`X\` geométrica inscrita en una forma que evoca una placa de terminal. Su diseño debe ser reconocible incluso en tamaños reducidos (24x24) y mantener su integridad en fondos claros y oscuros.
 
-- `Deep Ink` `#0F172A`
-- `Signal Cyan` `#0891B2`
-- `Forge Amber` `#D97706`
-- `Mist` `#E2E8F0`
-- `Graphite` `#334155`
-
-## Tipografia
-
-- UI y docs: sans sobria
-- terminal y snapshots: monospace compacta
-- evitar estilos decorativos
-
-## Logo
-
-El simbolo base es una `X` angular contenida dentro de una placa o terminal.
-Debe funcionar en:
-
-- 24x24
-- 64x64
-- 512x512
-- fondo claro y oscuro
-
-## Banner
-
-El banner debe priorizar:
-
-- nombre `Xzp`
-- descriptor corto
-- lectura limpia en GitHub y npm
-
-## Aplicacion
-
-- iconos y banner deben compartir angulos y diagonales
-- docs deben usar el mismo tono visual
-- snapshots deben mantener espaciado sobrio y lenguaje directo
+## Aplicación de Marca
+- Los activos visuales (iconos, banners) deben compartir los mismos ángulos y proporciones.
+- La documentación interna y externa debe mantener un tono directo y técnico.
+- Los snapshots de salida deben respetar los márgenes y el espaciado definido para garantizar una presentación profesional en cualquier entorno.
