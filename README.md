@@ -13,7 +13,7 @@
   <img alt="Platform" src="https://img.shields.io/badge/platform-Termux%20%7C%20Linux-111111?style=flat-square&labelColor=F97316&color=1F2937">
   <img alt="Package" src="https://img.shields.io/badge/package-%40nyxur%2Fxzp-111111?style=flat-square&labelColor=0F766E&color=1F2937">
   <img alt="Version" src="https://img.shields.io/badge/version-1.0.1-111111?style=flat-square&labelColor=2563EB&color=1F2937">
-  <img alt="License" src="https://img.shields.io/badge/license-MIT-111111?style=flat-square&labelColor=334155&color=1F2937">
+  <img alt="License" src="https://img.shields.io/badge/license-XZP-111111?style=flat-square&labelColor=334155&color=1F2937">
 </p>
 
 ---
