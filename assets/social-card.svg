@@ -1,0 +1,9 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" rx="36" fill="#0F172A"/>
+  <rect x="40" y="40" width="1120" height="550" rx="28" fill="#111827"/>
+  <text x="88" y="180" fill="#E2E8F0" font-family="monospace" font-size="96">Xzp</text>
+  <text x="88" y="258" fill="#0891B2" font-family="monospace" font-size="34">visual cli for termux + linux</text>
+  <text x="88" y="360" fill="#94A3B8" font-family="monospace" font-size="28">context • search • tree • doctor • safe mode • agent mode</text>
+  <path d="M862 144H1038L954 258L1044 384H868L952 264L862 144Z" fill="#0891B2"/>
+  <rect x="1072" y="144" width="24" height="240" fill="#D97706"/>
+</svg>

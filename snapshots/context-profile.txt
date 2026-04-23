@@ -1,0 +1,5 @@
+Xzp Context
+Contexto activo del proyecto detectado desde la ruta actual.
+
+Contexto: xzp [NODE]
+Perfil  : runtime:node | root:xzp | manager:npm-compatible | signal:explicit

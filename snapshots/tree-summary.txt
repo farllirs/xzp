@@ -1,0 +1,9 @@
+Xzp Tree
+Vista estructural de la ruta solicitada.
+
+Resumen
+----------------------------------------
+Lineas      : 31
+Directorios : 11
+Archivos    : 19
+Truncado    : si

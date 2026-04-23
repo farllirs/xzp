@@ -1,0 +1,96 @@
+XZP NON-COMMERCIAL LICENSE
+Version 1.0 — 2025
+Copyright (c) 2025 farllirs
+
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+1. DEFINITIONS
+
+   "Software" refers to xzp and all associated source code,
+   documentation, binaries, scripts, and assets distributed under this license.
+
+   "Commercial Use" means any use of the Software, in whole or in part, that
+   is intended for or directed toward commercial advantage or monetary
+   compensation. This includes, but is not limited to:
+     - Selling or sublicensing the Software or derivative works
+     - Offering the Software or derivative works as part of a paid product or service
+     - Using the Software to generate revenue, directly or indirectly
+     - Integrating the Software into a SaaS platform, API, or hosted service
+       that charges users fees
+
+   "Non-Commercial Use" means use of the Software solely for personal,
+   educational, research, or open-source purposes where no monetary
+   compensation is sought or received.
+
+   "Derivative Work" means any work based on or derived from the Software,
+   including modifications, translations, adaptations, or any work that
+   incorporates the Software in whole or in part.
+
+   "Contributor" means the original author and any person who submits changes,
+   patches, or additions to the Software.
+
+2. GRANT OF LICENSE
+
+   Subject to the terms and conditions of this License, the copyright holder
+   hereby grants you a worldwide, royalty-free, non-exclusive license to:
+
+   a) Use the Software for Non-Commercial purposes.
+   b) Copy and distribute verbatim copies of the Software.
+   c) Modify the Software and create Derivative Works for Non-Commercial purposes.
+   d) Distribute Derivative Works, provided that:
+      - You clearly attribute the original work to "farllirs / xzp"
+      - You include this License in any distribution
+      - You do not use the name "xzp" or "XZP" to endorse or promote
+        your Derivative Work without prior written permission
+
+3. RESTRICTIONS
+
+   The following uses are EXPRESSLY PROHIBITED without prior written permission
+   from the copyright holder:
+
+   a) Any Commercial Use of the Software or Derivative Works.
+   b) Selling access to a hosted version of the Software.
+   c) Bundling the Software into proprietary tools sold to third parties.
+   d) Removing or altering this license, copyright notices, or attribution
+      headers from any copy or Derivative Work.
+   e) Using the Software in any product or service that competes commercially
+      with the original Software or its author's related projects.
+
+4. ATTRIBUTION
+
+   Any distribution of the Software or Derivative Works must include:
+   - A clear visible reference to the original project:
+     "Based on xzp by farllirs — https://github.com/farllirs/xzp"
+   - This full license document
+
+5. CONTRIBUTIONS
+
+   Any contributions you submit to this project are made under this same
+   license. By submitting a contribution, you agree that your contribution
+   may be redistributed under these terms, and you confirm that you have
+   the right to grant this license for your contribution.
+
+6. DISCLAIMER OF WARRANTIES
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+   OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL
+   THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING
+   FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+   DEALINGS IN THE SOFTWARE.
+
+7. TERMINATION
+
+   Your rights under this License terminate automatically if you violate any
+   of its terms. Upon termination, you must cease all use and distribution of
+   the Software and destroy any copies in your possession.
+
+8. CONTACT
+
+   For commercial licensing inquiries or special permissions, contact:
+   https://github.com/farllirs
+
+---
+This license is inspired by Creative Commons NC principles and adapted for
+open-source software. It is NOT an OSI-approved open source license.
