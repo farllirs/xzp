@@ -1,0 +1,59 @@
+{
+  "name": "@nyxur/xzp",
+  "version": "1.2.1",
+  "type": "module",
+  "description": "Visual CLI for Termux and Linux with guided search, readable tree views, project context, version checks, Android mode, and safe flows for Python, Node, PHP, Ruby, Go, Rust, and Java.",
+  "keywords": [
+    "termux",
+    "linux",
+    "android",
+    "cli",
+    "python",
+    "node",
+    "php",
+    "ruby",
+    "go",
+    "rust",
+    "java",
+    "safe-shell"
+  ],
+  "license": "XZP",
+  "bin": {
+    "xzp": "bin/xzp",
+    "xzp-project-context": "bin/xzp-project-context"
+  },
+  "scripts": {
+    "start": "node ./bin/xzp",
+    "help": "node ./bin/xzp --help",
+    "test": "node --test ./tests/*.test.js",
+    "assets:render": "node ./scripts/render-brand-assets.mjs",
+    "pack:check": "npm pack --dry-run",
+    "release:check": "npm test && npm pack --dry-run"
+  },
+  "author": "farllirs",
+  "files": [
+    "bin/xzp",
+    "bin/xzp-project-context",
+    "src",
+    "data/commands/explain.json",
+    "data/locales",
+    "assets",
+    "snapshots",
+    "README.md",
+    "icon"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/farllirs/xzp.git"
+  },
+  "homepage": "https://github.com/farllirs/xzp#readme",
+  "bugs": {
+    "url": "https://github.com/farllirs/xzp/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2"
+  }
+}

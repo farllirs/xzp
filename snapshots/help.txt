@@ -1,0 +1,11 @@
+Xzp CLI
+Explorar, entender y preparar proyectos desde Termux o Linux.
+Android storage aparece cuando el modo de plataforma lo permite.
+Usa `xzp -h <comando>` para ver la ayuda puntual de cada comando.
+
+[Comandos principales]
+  xzp -m                 menu visual
+  xzp -v                 version local y publicada
+  xzp --agent-status     estado del modo agente
+  xzp -x --profile       contexto con perfil por stack
+  xzp -b "api client"    busqueda con semantica opcional

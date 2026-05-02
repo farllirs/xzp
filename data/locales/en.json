@@ -1,0 +1,526 @@
+{
+  "agentMode": {
+    "title": "Xzp Agent Mode",
+    "subtitle": "Non-interactive mode intended for agents and automation.",
+    "capabilities": {
+      "enableHint": "you can enable it with `xzp --agent-on` or `XZP_AGENT_MODE=1`",
+      "jsonDefault": "JSON output by default when the mode is active",
+      "avoidPrompts": "avoids prompts in compatible commands and applies safe defaults",
+      "preferPackage": "generates persisted context so agents prefer Xzp commands over system tools",
+      "persistContext": "keeps reports, state, and reference context for automated integration"
+    }
+  },
+  "agentContext": {
+    "summary": "Reference document for agents working inside Xzp. Its purpose is to reduce repetitive system calls and prioritize package-native commands when an equivalent capability already exists.",
+    "rule": "Before using system tools, the agent should try to solve the task with Xzp commands. Falling back to system commands only makes sense when Xzp does not expose that capability, when an external state must be validated, or when the operation requires lower-level inspection.",
+    "workflows": [
+      "use `xzp -x`, `xzp --inspect`, and `xzp --doctor` to build context before manually traversing files",
+      "use `xzp -b` to locate files and `xzp -t` to understand structure before relying on `find` or repeated directory walks",
+      "use `xzp -c`, `xzp -p`, and `xzp -k` to move persisted references without recalculating paths",
+      "use `xzp -a` to navigate shared storage and `xzp -r` to enter safe project shells",
+      "use `xzp --report-error` when the flow breaks and you need reusable evidence"
+    ],
+    "priorities": [
+      "prefer Xzp commands over raw shell usage",
+      "avoid prompts when agent mode is already active",
+      "use JSON outputs when another process will consume them",
+      "reduce repeated work by relying on persisted context and local cache"
+    ],
+    "notes": {
+      "contextPath": "persisted context path: {path}",
+      "configPath": "main config path: {path}",
+      "regeneration": "regenerate this file with `xzp --agent-refresh-context`."
+    }
+  },
+  "output": {
+    "help": {
+      "bannerTitle": "Xzp CLI",
+      "bannerLine1": "Explore, understand, and prepare projects from Termux or Linux.",
+      "bannerLine2": "Android storage appears when the platform mode allows it.",
+      "bannerLine3": "Use `xzp -h <command>` to see command-specific help.",
+      "unknownTopic": "I did not recognize \"{topic}\"",
+      "configPath": "Config  {path}",
+      "commandTitle": "Help · {command}",
+      "resolvedFrom": "Resolved from  {topic}",
+      "none": "none",
+      "labels": {
+        "usage": "Usage",
+        "aliases": "Aliases",
+        "details": "Details",
+        "related": "Related"
+      }
+    }
+  },
+  "help": {
+    "commands": [
+      {
+        "name": "agent-mode",
+        "aliases": [],
+        "summary": "Enables, checks, or regenerates the context intended for agents and automation.",
+        "usage": "xzp --agent-status | xzp --agent-on | xzp --agent-off | xzp --agent-context | xzp --agent-refresh-context",
+        "details": [
+          "When enabled, Xzp prefers JSON, avoids prompts, and uses safe defaults in compatible commands.",
+          "It can also be enabled temporarily with `XZP_AGENT_MODE=1`.",
+          "It now keeps a persisted Markdown context to reduce repetitive exploration by agents."
+        ]
+      },
+      {
+        "name": "locale",
+        "aliases": [],
+        "summary": "Changes or shows the active Xzp language.",
+        "usage": "xzp --locale co_es | xzp --locale en | xzp --locale ru",
+        "details": [
+          "Lets you change the persisted locale without editing the config file.",
+          "Currently supports `co_es`, `en`, and `ru`."
+        ]
+      },
+      {
+        "name": "menu",
+        "aliases": ["m"],
+        "summary": "Opens the visual Xzp menu.",
+        "usage": "xzp -m",
+        "details": [
+          "Navigate with arrows or numbers depending on the screen.",
+          "Useful for settings, search, version, context, and safe shell access."
+        ]
+      },
+      {
+        "name": "copy",
+        "aliases": ["c"],
+        "summary": "Copies a path, name, or derived format into the Xzp clipboard.",
+        "usage": "xzp -c [path] [--name|--relative|--ext|--json|--shell|--project-root]",
+        "details": [
+          "Without arguments, it uses the project or current directory.",
+          "With `--name`, it stores only the visible name.",
+          "With `--relative`, it uses the project root as the base when available.",
+          "With `--json` and `XZP_OUTPUT_FORMAT=json`, it integrates better with scripts."
+        ]
+      },
+      {
+        "name": "paste",
+        "aliases": ["p"],
+        "summary": "Pastes or moves what Xzp stored.",
+        "usage": "xzp -p [--move|--copy-action] [--into path] [--preview]",
+        "details": [
+          "It will ask for the action if you do not pass it as a flag.",
+          "It works on the clipboard saved by `xzp -c`.",
+          "With `--preview`, it calculates the destination without touching files."
+        ]
+      },
+      {
+        "name": "clipboard",
+        "aliases": ["k"],
+        "summary": "Shows what is currently stored in the Xzp clipboard.",
+        "usage": "xzp -k",
+        "details": [
+          "It displays source, name, type, mode, derived value, and timestamp."
+        ]
+      },
+      {
+        "name": "clipboard-clear",
+        "aliases": ["K"],
+        "summary": "Clears the Xzp clipboard.",
+        "usage": "xzp -K",
+        "details": [
+          "Removes the path currently stored in the Xzp clipboard."
+        ]
+      },
+      {
+        "name": "context",
+        "aliases": ["x"],
+        "summary": "Shows the current project context.",
+        "usage": "xzp -x [--profile] [--save-favorite name|--list-favorites|--remove-favorite name]",
+        "details": [
+          "Detects Python, Node, PHP, Ruby, Go, Rust, or Java.",
+          "It can also be used for prompt paths such as `--prompt-context`.",
+          "With `XZP_OUTPUT_FORMAT=json`, it returns a script-ready structure.",
+          "It can store persistent favorite paths and show a stack profile."
+        ]
+      },
+      {
+        "name": "search",
+        "aliases": ["b", "buscar"],
+        "summary": "Searches files or folders by pattern.",
+        "usage": "xzp -b \"file\" --scope actual [--files|--dirs] [--hidden] [--limit 120] [--semantic] [--exclude dist]",
+        "details": [
+          "Supports scopes, type filters, match ranking, and persisted exclusions.",
+          "With `XZP_OUTPUT_FORMAT=json`, it returns structured results."
+        ]
+      },
+      {
+        "name": "explain",
+        "aliases": ["e", "explicar"],
+        "summary": "Explains a command known by Xzp.",
+        "usage": "xzp -e ls",
+        "details": [
+          "Shows usage, risk, and notes for the command."
+        ]
+      },
+      {
+        "name": "tree",
+        "aliases": ["t"],
+        "summary": "Shows the full tree of folders and files.",
+        "usage": "xzp -t src [--depth 3] [--summary] [--compare other/path]",
+        "details": [
+          "Accepts `--depth`, `--limit`, and `--hidden` to control the view.",
+          "Automatically marks project folders by language.",
+          "It can also summarize and compare two paths within the same scope."
+        ]
+      },
+      {
+        "name": "android",
+        "aliases": ["a"],
+        "summary": "Opens quick access to Android or Linux.",
+        "usage": "xzp -a",
+        "details": [
+          "In Termux it opens a visual folder navigator before entering the shell.",
+          "You can move with arrows, enter with Enter, go up with Esc or left, and confirm the path with Ctrl+G.",
+          "Inside the shell, Ctrl+G reopens the visual navigator from the current path.",
+          "The final path is copied into the internal Xzp clipboard for later reuse.",
+          "On Linux it uses the same flow over the configured quick root."
+        ]
+      },
+      {
+        "name": "install",
+        "aliases": ["i"],
+        "summary": "Installs dependencies for the detected project.",
+        "usage": "xzp -i",
+        "details": [
+          "Uses safe mode and language detection."
+        ]
+      },
+      {
+        "name": "safe-shell",
+        "aliases": ["r", "seguro"],
+        "summary": "Opens the safe project shell.",
+        "usage": "xzp -r",
+        "details": [
+          "Without arguments, it opens the safe environment for the detected project.",
+          "With `xzp -r app.py my-app`, it saves a safe shortcut.",
+          "With `xzp -r my-app`, it runs the saved shortcut without manually changing directories.",
+          "It also supports `--list-safe-shortcuts`, `--remove-safe-shortcut <name>`, `--safe-status`, and `--preset <dev|debug|test|release>`.",
+          "Generated launchers remember the saved preset and Xzp keeps the last safe session."
+        ]
+      },
+      {
+        "name": "version",
+        "aliases": ["v"],
+        "summary": "Compares the local version with npm.",
+        "usage": "xzp -v",
+        "details": [
+          "Shows local version, published version, and alignment status.",
+          "Recommends the next bump and works as a quick release center."
+        ]
+      },
+      {
+        "name": "doctor",
+        "aliases": ["D"],
+        "summary": "Diagnoses the environment visible to Xzp.",
+        "usage": "xzp --doctor",
+        "details": [
+          "Checks host, shell, configuration, storage, and base tools.",
+          "Useful before publishing a release or debugging a broken installation."
+        ]
+      },
+      {
+        "name": "inspect",
+        "aliases": ["I"],
+        "summary": "Summarizes the current project with useful metadata.",
+        "usage": "xzp --inspect",
+        "details": [
+          "Shows language, key files, metadata, and next steps.",
+          "It also exposes stack profile and visible debt.",
+          "Useful for quickly auditing a project before changing it."
+        ]
+      },
+      {
+        "name": "report-error",
+        "aliases": [],
+        "summary": "Prepares an error report for the maintainer.",
+        "usage": "xzp --report-error",
+        "details": [
+          "Takes the last error stored by Xzp and asks for a short description.",
+          "Generates Markdown and JSON output with an identifiable snapshot.",
+          "Then it tries to open a mail draft for the maintainer."
+        ]
+      },
+      {
+        "name": "prompt-context",
+        "aliases": [],
+        "summary": "Generates a compact line for project context.",
+        "usage": "xzp --prompt-context",
+        "details": [
+          "Used to customize the prompt or integrate with shells."
+        ]
+      },
+      {
+        "name": "prompt-project-root",
+        "aliases": [],
+        "summary": "Prints the detected project root.",
+        "usage": "xzp --prompt-project-root",
+        "details": [
+          "Returns only the project root directory."
+        ]
+      },
+      {
+        "name": "prompt-project-path",
+        "aliases": [],
+        "summary": "Prints the detected project path.",
+        "usage": "xzp --prompt-project-path",
+        "details": [
+          "Returns the detected project path for prompt usage."
+        ]
+      }
+    ]
+  },
+  "menu": {
+    "localeChanged": "Active language: {value}.",
+    "noFavorites": "There are no saved favorites yet.",
+    "exit": "Leaving Xzp.",
+    "platformModeChanged": "Platform mode: {value}.",
+    "featureStateChanged": "{feature}: {state}.",
+    "promptContextPositionChanged": "Prompt context position: {value}.",
+    "promptThemeChanged": "Prompt theme: {value}.",
+    "visualModeChanged": "Menu visual mode: {value}.",
+    "enabled": "enabled",
+    "disabled": "disabled",
+    "features": {
+      "androidShortcut": "Quick access",
+      "projectBadge": "Project detector and color",
+      "smartProjectInstall": "Safe project install"
+    },
+    "featureDescriptions": {
+      "androidShortcut": "allows using xzp -a in Termux or Linux",
+      "projectBadge": "shows the current project type with language color",
+      "smartProjectInstall": "rescues installs and can install runtimes with pkg in Termux"
+    }
+  },
+  "prompt": {
+    "common": {
+      "usagePrefix": "Usage  : ",
+      "currentValue": "Current: {value}",
+      "currentRowPrefix": "Current: ",
+      "invalidOptionOrKey": "Invalid option. Use a number or a valid key.",
+      "invalidMenuOption": "Invalid option. Use a valid menu number.",
+      "invalidOneToTwo": "Invalid option. Use 1 or 2.",
+      "invalidOneToThree": "Invalid option. Use 1, 2, or 3.",
+      "invalidOneToFour": "Invalid option. Use 1, 2, 3, or 4.",
+      "invalidOneToFive": "Invalid option. Use 1, 2, 3, 4, or 5.",
+      "back": "Back",
+      "backToMainMenu": "Back to main menu",
+      "operationCanceled": "Operation canceled.",
+      "paginationHeader": "  Page {page}/{total}  ·  Arrows navigate  ·  Enter select  ·  Esc back",
+      "paginationFooter": "  ←/PgUp previous page  ·  →/PgDn next page",
+      "activeFilter": "  Active filter  {value}",
+      "enabled": "enabled",
+      "disabled": "disabled",
+      "promptPositionInline": "inline",
+      "promptPositionOff": "hidden",
+      "promptPositionRight": "right",
+      "platformLinux": "linux",
+      "platformTermux": "termux",
+      "platformAuto": "auto"
+    },
+    "searchScope": {
+      "title": "Choose where to search",
+      "prompt": "Scope [1-{count}, Enter=1]: "
+    },
+    "explainTopic": {
+      "title": "Choose a command to explain",
+      "prompt": "Topic [1-{count}, name, Enter=1]: ",
+      "error": "Invalid option. Use a number or the command name."
+    },
+    "menu": {
+      "title": "Xzp Menu",
+      "prompt": "Option [1-{count}, Enter=1]: ",
+      "intro": "Quick hub to navigate, review versions, and enter safe mode.",
+      "options": [
+        { "key": "language", "label": "Language", "hint": "change the active Xzp language" },
+        { "key": "doctor", "label": "Environment doctor", "hint": "review shell, storage, config, and visible tools" },
+        { "key": "inspect", "label": "Inspect project", "hint": "summarize key files and metadata for the current project" },
+        { "key": "context", "label": "Context and profile", "hint": "detect stack, show profile, and remember recent projects" },
+        { "key": "favorites", "label": "Saved favorites", "hint": "list persistent quick paths saved from context" },
+        { "key": "copy", "label": "Copy path or name", "hint": "save the current path into the Xzp clipboard" },
+        { "key": "paste", "label": "Paste content", "hint": "use the saved path and ask whether to move or copy" },
+        { "key": "clipboard", "label": "View clipboard", "hint": "show the saved path and name" },
+        { "key": "clipboard-clear", "label": "Clear clipboard", "hint": "delete the value saved by Xzp" },
+        { "key": "search", "label": "Search files or folders", "hint": "find quickly by name or pattern" },
+        { "key": "explain", "label": "Explain a command", "hint": "summarize usage, risk, and notes" },
+        { "key": "tree", "label": "Show a path tree", "hint": "display the full structure and mark projects" },
+        { "key": "safe-shell", "label": "Enter safe mode", "hint": "open the project with the correct environment" },
+        { "key": "version", "label": "View Xzp version", "hint": "compare local against the published version" },
+        { "key": "settings", "label": "Settings and features", "hint": "toggle extras, platform, and prompt" },
+        { "key": "help", "label": "View help", "hint": "show commands and examples" },
+        { "key": "exit", "label": "Exit", "hint": "close the menu" }
+      ]
+    },
+    "locale": {
+      "title": "Language",
+      "prompt": "Language [1-{count}, Enter=1]: ",
+      "options": [
+        { "key": "co_es", "label": "Spanish (Colombia)", "usage": "project default locale" },
+        { "key": "en", "label": "English", "usage": "base interface in English" },
+        { "key": "ru", "label": "Russian", "usage": "base interface in Russian" },
+        { "key": "back", "label": "Back" }
+      ]
+    },
+    "settings": {
+      "title": "Xzp Settings",
+      "prompt": "Setting [1-{count}, Enter=1]: ",
+      "intro": "Enable only what you actually want to see every day.",
+      "options": {
+        "platformMode": { "label": "Platform mode", "usage": "choose auto, termux, or linux" },
+        "androidShortcut": { "label": "Quick access", "usage": "allows xzp -a in Termux or Linux" },
+        "projectBadge": { "label": "Project detector and color", "usage": "shows language and color inside Xzp" },
+        "promptContextPosition": { "label": "Prompt context position", "usage": "choose right, inline next to the path, or off" },
+        "promptTheme": { "label": "Prompt theme", "usage": "choose ocean, forest, ember, or mono" },
+        "smartProjectInstall": { "label": "Safe project install", "usage": "rescues installs and uses safe mode by language" },
+        "menuVisualMode": { "label": "Menu visual mode", "usage": "choose cards or compact for denser terminals" }
+      }
+    },
+    "promptContextPosition": {
+      "title": "Prompt context position",
+      "prompt": "Position [1-{count}, Enter=1]: ",
+      "options": [
+        { "key": "right", "label": "Right side of prompt", "usage": "shows [PYTHON] or [NODE] on the right edge" },
+        { "key": "inline", "label": "Inline next to path", "usage": "shows Xzp@android /path [PYTHON] on the same line" },
+        { "key": "off", "label": "Hide context", "usage": "does not show the project badge in the prompt" },
+        { "key": "back", "label": "Back" }
+      ]
+    },
+    "platformMode": {
+      "title": "Platform mode",
+      "prompt": "Mode [1-{count}, Enter=1]: ",
+      "options": [
+        { "key": "auto", "label": "Auto", "usage": "detect whether you are in Termux or Linux from the real environment" },
+        { "key": "termux", "label": "Termux mode", "usage": "enables behavior centered on Android storage and Termux" },
+        { "key": "linux", "label": "Linux mode", "usage": "disables Android and assumes a pure Linux environment" },
+        { "key": "back", "label": "Back" }
+      ]
+    },
+    "featureToggle": {
+      "enableLabel": "Enable",
+      "disableLabel": "Disable",
+      "disableUsage": "hide {feature} until you enable it again",
+      "prompt": "Action [1-{count}, Enter=3]: "
+    },
+    "promptTheme": {
+      "title": "Prompt theme",
+      "prompt": "Theme [1-{count}, Enter=1]: ",
+      "options": [
+        { "key": "ocean", "label": "Ocean", "usage": "clean blues and readable badge" },
+        { "key": "forest", "label": "Forest", "usage": "greens with a softer look" },
+        { "key": "ember", "label": "Ember", "usage": "warm tone to highlight actions" },
+        { "key": "mono", "label": "Mono", "usage": "more restrained and direct output" },
+        { "key": "back", "label": "Back" }
+      ]
+    },
+    "menuVisualMode": {
+      "title": "Menu visual mode",
+      "prompt": "Mode [1-{count}, Enter=1]: ",
+      "options": [
+        { "key": "cards", "label": "Cards", "usage": "wider panels with visual cues" },
+        { "key": "compact", "label": "Compact", "usage": "denser layout for narrow terminals" },
+        { "key": "back", "label": "Back" }
+      ]
+    },
+    "pasteAction": {
+      "title": "Paste action",
+      "prompt": "Action [1-{count}, Enter=1]: ",
+      "intro": "The Xzp clipboard stores a file or folder path.",
+      "options": [
+        { "key": "copy", "label": "Copy", "usage": "duplicate the file or folder into the current path" },
+        { "key": "move", "label": "Move", "usage": "move the file or folder into the current path" }
+      ]
+    },
+    "searchPattern": {
+      "question": "Pattern to search: ",
+      "required": "You must type something to search."
+    },
+    "treeTarget": {
+      "question": "Path to display [Enter=.]: "
+    },
+    "navigator": {
+      "controls": "  ↑/↓ move  ·  Enter/→ enter  ·  Esc/← up  ·  Ctrl+G use path",
+      "currentPath": "  Current path  {path}",
+      "page": "  Page {page}/{total}",
+      "useCurrentFolder": "Use this folder",
+      "useCurrentFolderHint": "Open the shell here and copy this path into the Xzp clipboard.",
+      "goParentHint": "Go up to the parent folder.",
+      "detectedProject": "Detected project",
+      "navigableFolder": "Browsable folder"
+    }
+  },
+  "output": {
+    "help": {
+      "bannerTitle": "Xzp CLI",
+      "bannerLine1": "Explore, understand, and prepare projects from Termux or Linux.",
+      "bannerLine2": "Android storage appears when the platform mode allows it.",
+      "bannerLine3": "Use `xzp -h <command>` to see command-specific help.",
+      "unknownTopic": "I did not recognize \"{topic}\"",
+      "configPath": "Config  {path}",
+      "commandTitle": "Help · {command}",
+      "resolvedFrom": "Resolved from  {topic}",
+      "none": "none",
+      "mainCommandsTitle": "Main commands",
+      "mainCommands": [
+        "xzp -m                 visual menu",
+        "xzp -v                 local and published version",
+        "xzp --agent-status     agent mode status",
+        "xzp --doctor           review environment and tools",
+        "xzp --inspect          summarize the current project",
+        "xzp --report-error     prepare a report for the maintainer",
+        "xzp -c                 copy current path or name",
+        "xzp -p                 paste or move saved content",
+        "xzp -k                 view the Xzp clipboard",
+        "xzp -K                 clear the Xzp clipboard",
+        "xzp -x                 current project context",
+        "xzp -x --profile       context with stack profile",
+        "xzp -x --list-favorites persistent favorites",
+        "xzp -b \"file\"          search files or folders",
+        "xzp -e ls              explain a command",
+        "xzp -t src             full tree for a path",
+        "xzp -i                 install dependencies for the detected project",
+        "xzp -r                 open safe project mode",
+        "xzp -r main.py bot     save a safe shortcut",
+        "xzp -r bot             run the saved safe shortcut",
+        "xzp -a                 quick access to Android or Linux"
+      ],
+      "quickUsageTitle": "Quick usage",
+      "quickUsage": [
+        "xzp --doctor",
+        "xzp --inspect",
+        "xzp --report-error",
+        "xzp --agent-status",
+        "xzp -c --relative",
+        "xzp -c --json",
+        "xzp -c --name",
+        "xzp -b \"*.js\" --scope actual",
+        "xzp -b \"api client\" --semantic --exclude dist",
+        "xzp -t . --depth 3 --scope actual",
+        "xzp -t . --summary --compare src",
+        "xzp -x",
+        "xzp -p --preview --into ./tmp",
+        "xzp -r app.py my-app",
+        "xzp -r --list-safe-shortcuts",
+        "xzp --prompt-context",
+        "xzp --prompt-project-root",
+        "xzp --prompt-project-path"
+      ],
+      "labels": {
+        "usage": "Usage",
+        "aliases": "Aliases",
+        "details": "Details",
+        "related": "Related"
+      }
+    },
+    "search": {
+      "noMatches": "No matches were found."
+    },
+    "explain": {
+      "commandLabel": "Command",
+      "describeLabel": "Describes",
+      "usageLabel": "Base usage"
+    }
+  }
+}

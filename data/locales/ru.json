@@ -1,0 +1,526 @@
+{
+  "agentMode": {
+    "title": "Режим агента Xzp",
+    "subtitle": "Неинтерактивный режим для агентов и автоматизации.",
+    "capabilities": {
+      "enableHint": "его можно включить через `xzp --agent-on` или `XZP_AGENT_MODE=1`",
+      "jsonDefault": "JSON-вывод по умолчанию, когда режим активен",
+      "avoidPrompts": "избегает интерактивных запросов в совместимых командах и применяет безопасные значения по умолчанию",
+      "preferPackage": "создает сохраненный контекст, чтобы агенты предпочитали команды Xzp системным инструментам",
+      "persistContext": "сохраняет отчеты, состояние и справочный контекст для автоматизированной интеграции"
+    }
+  },
+  "agentContext": {
+    "summary": "Справочный документ для агентов, работающих внутри Xzp. Его задача — сократить повторяющиеся обращения к системе и отдавать приоритет встроенным командам пакета, если нужная возможность уже есть.",
+    "rule": "Прежде чем использовать системные инструменты, агент должен попытаться решить задачу командами Xzp. Переходить к системным командам стоит только тогда, когда Xzp не предоставляет нужную возможность, когда нужно проверить внешнее состояние или когда операция требует более низкоуровневой проверки.",
+    "workflows": [
+      "используй `xzp -x`, `xzp --inspect` и `xzp --doctor`, чтобы собрать контекст до ручного обхода файлов",
+      "используй `xzp -b` для поиска файлов и `xzp -t` для понимания структуры, прежде чем полагаться на `find` или повторные обходы каталогов",
+      "используй `xzp -c`, `xzp -p` и `xzp -k`, чтобы переносить сохраненные ссылки без повторного вычисления путей",
+      "используй `xzp -a` для навигации по общему хранилищу и `xzp -r` для входа в безопасные shell-сессии проекта",
+      "используй `xzp --report-error`, когда процесс ломается и нужно сохранить пригодные для повторного использования данные"
+    ],
+    "priorities": [
+      "предпочитать команды Xzp сырому shell",
+      "избегать интерактивных запросов, если режим агента уже включен",
+      "использовать JSON-вывод, когда результат будет читать другой процесс",
+      "сокращать повторяющуюся работу за счет сохраненного контекста и локального кеша"
+    ],
+    "notes": {
+      "contextPath": "путь к сохраненному контексту: {path}",
+      "configPath": "путь к основному конфигу: {path}",
+      "regeneration": "пересоздай этот файл командой `xzp --agent-refresh-context`."
+    }
+  },
+  "output": {
+    "help": {
+      "bannerTitle": "Xzp CLI",
+      "bannerLine1": "Исследование, понимание и подготовка проектов из Termux или Linux.",
+      "bannerLine2": "Android storage появляется, если это разрешает режим платформы.",
+      "bannerLine3": "Используй `xzp -h <команда>`, чтобы посмотреть справку по конкретной команде.",
+      "unknownTopic": "Не удалось распознать \"{topic}\"",
+      "configPath": "Конфиг  {path}",
+      "commandTitle": "Справка · {command}",
+      "resolvedFrom": "Определено по  {topic}",
+      "none": "нет",
+      "labels": {
+        "usage": "Использование",
+        "aliases": "Алиасы",
+        "details": "Подробности",
+        "related": "Связанные"
+      }
+    }
+  },
+  "help": {
+    "commands": [
+      {
+        "name": "agent-mode",
+        "aliases": [],
+        "summary": "Включает, проверяет или пересоздает контекст для агентов и автоматизации.",
+        "usage": "xzp --agent-status | xzp --agent-on | xzp --agent-off | xzp --agent-context | xzp --agent-refresh-context",
+        "details": [
+          "Когда режим включен, Xzp предпочитает JSON, избегает интерактивных запросов и использует безопасные значения по умолчанию в совместимых командах.",
+          "Его также можно временно включить через `XZP_AGENT_MODE=1`.",
+          "Теперь режим хранит сохраненный Markdown-контекст, чтобы уменьшить повторяющееся исследование со стороны агентов."
+        ]
+      },
+      {
+        "name": "locale",
+        "aliases": [],
+        "summary": "Меняет или показывает активный язык Xzp.",
+        "usage": "xzp --locale co_es | xzp --locale en | xzp --locale ru",
+        "details": [
+          "Позволяет менять сохраненный locale без ручного редактирования конфигурации.",
+          "Сейчас поддерживаются `co_es`, `en` и `ru`."
+        ]
+      },
+      {
+        "name": "menu",
+        "aliases": ["m"],
+        "summary": "Открывает визуальное меню Xzp.",
+        "usage": "xzp -m",
+        "details": [
+          "Навигация стрелками или цифрами в зависимости от экрана.",
+          "Подходит для перехода к настройкам, поиску, версии, контексту и безопасной shell-сессии."
+        ]
+      },
+      {
+        "name": "copy",
+        "aliases": ["c"],
+        "summary": "Копирует путь, имя или производный формат во внутренний буфер Xzp.",
+        "usage": "xzp -c [путь] [--name|--relative|--ext|--json|--shell|--project-root]",
+        "details": [
+          "Без аргументов использует проект или текущую папку.",
+          "С `--name` сохраняет только видимое имя.",
+          "С `--relative` использует корень проекта как базу, если он определен.",
+          "С `--json` и `XZP_OUTPUT_FORMAT=json` лучше подходит для скриптов."
+        ]
+      },
+      {
+        "name": "paste",
+        "aliases": ["p"],
+        "summary": "Вставляет или перемещает то, что сохранил Xzp.",
+        "usage": "xzp -p [--move|--copy-action] [--into путь] [--preview]",
+        "details": [
+          "Если действие не передано флагом, команда спросит его отдельно.",
+          "Работает с буфером, сохраненным через `xzp -c`.",
+          "С `--preview` вычисляет цель, не изменяя файлы."
+        ]
+      },
+      {
+        "name": "clipboard",
+        "aliases": ["k"],
+        "summary": "Показывает содержимое буфера Xzp.",
+        "usage": "xzp -k",
+        "details": [
+          "Показывает источник, имя, тип, режим, производное значение и дату."
+        ]
+      },
+      {
+        "name": "clipboard-clear",
+        "aliases": ["K"],
+        "summary": "Очищает буфер Xzp.",
+        "usage": "xzp -K",
+        "details": [
+          "Удаляет путь, сохраненный во внутреннем буфере Xzp."
+        ]
+      },
+      {
+        "name": "context",
+        "aliases": ["x"],
+        "summary": "Показывает контекст текущего проекта.",
+        "usage": "xzp -x [--profile] [--save-favorite имя|--list-favorites|--remove-favorite имя]",
+        "details": [
+          "Определяет Python, Node, PHP, Ruby, Go, Rust или Java.",
+          "Может использоваться и для prompt-путей, например `--prompt-context`.",
+          "С `XZP_OUTPUT_FORMAT=json` возвращает структуру, готовую для скриптов.",
+          "Может хранить избранные пути и показывать профиль стека."
+        ]
+      },
+      {
+        "name": "search",
+        "aliases": ["b", "buscar"],
+        "summary": "Ищет файлы или каталоги по шаблону.",
+        "usage": "xzp -b \"файл\" --scope actual [--files|--dirs] [--hidden] [--limit 120] [--semantic] [--exclude dist]",
+        "details": [
+          "Поддерживает scope, фильтры по типу, ранжирование совпадений и сохраненные исключения.",
+          "С `XZP_OUTPUT_FORMAT=json` возвращает структурированные результаты."
+        ]
+      },
+      {
+        "name": "explain",
+        "aliases": ["e", "explicar"],
+        "summary": "Объясняет команду, известную Xzp.",
+        "usage": "xzp -e ls",
+        "details": [
+          "Показывает использование, риск и заметки по команде."
+        ]
+      },
+      {
+        "name": "tree",
+        "aliases": ["t"],
+        "summary": "Показывает полное дерево каталогов и файлов.",
+        "usage": "xzp -t src [--depth 3] [--summary] [--compare другой/путь]",
+        "details": [
+          "Поддерживает `--depth`, `--limit` и `--hidden` для управления видом.",
+          "Автоматически помечает проектные каталоги по языку.",
+          "Также может кратко описывать и сравнивать два пути в рамках одного scope."
+        ]
+      },
+      {
+        "name": "android",
+        "aliases": ["a"],
+        "summary": "Открывает быстрый доступ к Android или Linux.",
+        "usage": "xzp -a",
+        "details": [
+          "В Termux открывает визуальный навигатор по папкам перед входом в shell.",
+          "Можно двигаться стрелками, входить через Enter, подниматься через Esc или влево и подтверждать путь через Ctrl+G.",
+          "Внутри shell Ctrl+G снова открывает визуальный навигатор из текущего пути.",
+          "Итоговый путь копируется во внутренний буфер Xzp для повторного использования.",
+          "В Linux используется тот же поток поверх настроенного быстрого корня."
+        ]
+      },
+      {
+        "name": "install",
+        "aliases": ["i"],
+        "summary": "Устанавливает зависимости обнаруженного проекта.",
+        "usage": "xzp -i",
+        "details": [
+          "Использует безопасный режим и определение языка."
+        ]
+      },
+      {
+        "name": "safe-shell",
+        "aliases": ["r", "seguro"],
+        "summary": "Открывает безопасную shell-сессию проекта.",
+        "usage": "xzp -r",
+        "details": [
+          "Без аргументов открывает безопасное окружение для обнаруженного проекта.",
+          "С `xzp -r app.py my-app` сохраняет безопасный ярлык.",
+          "С `xzp -r my-app` запускает сохраненный ярлык без ручного перехода по каталогам.",
+          "Также поддерживает `--list-safe-shortcuts`, `--remove-safe-shortcut <имя>`, `--safe-status` и `--preset <dev|debug|test|release>`.",
+          "Сгенерированные launchers запоминают сохраненный preset, а Xzp хранит последнюю безопасную сессию."
+        ]
+      },
+      {
+        "name": "version",
+        "aliases": ["v"],
+        "summary": "Сравнивает локальную версию с npm.",
+        "usage": "xzp -v",
+        "details": [
+          "Показывает локальную версию, опубликованную версию и состояние выравнивания.",
+          "Рекомендует следующий bump и работает как быстрый центр релиза."
+        ]
+      },
+      {
+        "name": "doctor",
+        "aliases": ["D"],
+        "summary": "Диагностирует окружение, видимое для Xzp.",
+        "usage": "xzp --doctor",
+        "details": [
+          "Проверяет хост, shell, конфигурацию, storage и базовые инструменты.",
+          "Полезно перед публикацией релиза или разбором сломанной установки."
+        ]
+      },
+      {
+        "name": "inspect",
+        "aliases": ["I"],
+        "summary": "Сводно показывает текущий проект и полезные метаданные.",
+        "usage": "xzp --inspect",
+        "details": [
+          "Показывает язык, ключевые файлы, метаданные и следующие шаги.",
+          "Также раскрывает профиль стека и заметный технический долг.",
+          "Подходит для быстрого аудита проекта перед изменениями."
+        ]
+      },
+      {
+        "name": "report-error",
+        "aliases": [],
+        "summary": "Подготавливает отчет об ошибке для сопровождающего.",
+        "usage": "xzp --report-error",
+        "details": [
+          "Берет последнюю ошибку, сохраненную Xzp, и просит короткое описание.",
+          "Генерирует Markdown и JSON с идентифицируемым снимком состояния.",
+          "После этого пытается открыть черновик письма для сопровождающего."
+        ]
+      },
+      {
+        "name": "prompt-context",
+        "aliases": [],
+        "summary": "Генерирует компактную строку контекста проекта.",
+        "usage": "xzp --prompt-context",
+        "details": [
+          "Используется для настройки prompt или интеграции с shell."
+        ]
+      },
+      {
+        "name": "prompt-project-root",
+        "aliases": [],
+        "summary": "Печатает обнаруженный корень проекта.",
+        "usage": "xzp --prompt-project-root",
+        "details": [
+          "Возвращает только корневую директорию проекта."
+        ]
+      },
+      {
+        "name": "prompt-project-path",
+        "aliases": [],
+        "summary": "Печатает обнаруженный путь проекта.",
+        "usage": "xzp --prompt-project-path",
+        "details": [
+          "Возвращает обнаруженный путь проекта для использования в prompt."
+        ]
+      }
+    ]
+  },
+  "menu": {
+    "localeChanged": "Активный язык: {value}.",
+    "noFavorites": "Сохраненных избранных путей пока нет.",
+    "exit": "Выход из Xzp.",
+    "platformModeChanged": "Режим платформы: {value}.",
+    "featureStateChanged": "{feature}: {state}.",
+    "promptContextPositionChanged": "Положение контекста prompt: {value}.",
+    "promptThemeChanged": "Тема prompt: {value}.",
+    "visualModeChanged": "Визуальный режим меню: {value}.",
+    "enabled": "включено",
+    "disabled": "выключено",
+    "features": {
+      "androidShortcut": "Быстрый доступ",
+      "projectBadge": "Определение проекта и цвет",
+      "smartProjectInstall": "Безопасная установка проекта"
+    },
+    "featureDescriptions": {
+      "androidShortcut": "разрешает использовать xzp -a в Termux или Linux",
+      "projectBadge": "показывает тип текущего проекта и цвет по языку",
+      "smartProjectInstall": "спасает установки и может ставить runtimes через pkg в Termux"
+    }
+  },
+  "prompt": {
+    "common": {
+      "usagePrefix": "Использ.: ",
+      "currentValue": "Текущее: {value}",
+      "currentRowPrefix": "Текущее: ",
+      "invalidOptionOrKey": "Неверный вариант. Используй номер или корректный ключ.",
+      "invalidMenuOption": "Неверный вариант. Используй корректный номер меню.",
+      "invalidOneToTwo": "Неверный вариант. Используй 1 или 2.",
+      "invalidOneToThree": "Неверный вариант. Используй 1, 2 или 3.",
+      "invalidOneToFour": "Неверный вариант. Используй 1, 2, 3 или 4.",
+      "invalidOneToFive": "Неверный вариант. Используй 1, 2, 3, 4 или 5.",
+      "back": "Назад",
+      "backToMainMenu": "Назад в главное меню",
+      "operationCanceled": "Операция отменена.",
+      "paginationHeader": "  Страница {page}/{total}  ·  Стрелки навигация  ·  Enter выбрать  ·  Esc назад",
+      "paginationFooter": "  ←/PgUp предыдущая страница  ·  →/PgDn следующая страница",
+      "activeFilter": "  Активный фильтр  {value}",
+      "enabled": "включено",
+      "disabled": "выключено",
+      "promptPositionInline": "inline",
+      "promptPositionOff": "скрыто",
+      "promptPositionRight": "справа",
+      "platformLinux": "linux",
+      "platformTermux": "termux",
+      "platformAuto": "auto"
+    },
+    "searchScope": {
+      "title": "Выбери, где искать",
+      "prompt": "Scope [1-{count}, Enter=1]: "
+    },
+    "explainTopic": {
+      "title": "Выбери команду для объяснения",
+      "prompt": "Тема [1-{count}, имя, Enter=1]: ",
+      "error": "Неверный вариант. Используй номер или имя команды."
+    },
+    "menu": {
+      "title": "Меню Xzp",
+      "prompt": "Вариант [1-{count}, Enter=1]: ",
+      "intro": "Быстрый центр для навигации, проверки версии и входа в безопасный режим.",
+      "options": [
+        { "key": "language", "label": "Язык", "hint": "сменить активный язык Xzp" },
+        { "key": "doctor", "label": "Диагностика окружения", "hint": "проверить shell, storage, config и видимые инструменты" },
+        { "key": "inspect", "label": "Проверить проект", "hint": "кратко показать ключевые файлы и метаданные текущего проекта" },
+        { "key": "context", "label": "Контекст и профиль", "hint": "определить стек, показать профиль и помнить недавние проекты" },
+        { "key": "favorites", "label": "Сохраненное избранное", "hint": "показать постоянные быстрые пути из контекста" },
+        { "key": "copy", "label": "Копировать путь или имя", "hint": "сохранить текущий путь во внутренний буфер Xzp" },
+        { "key": "paste", "label": "Вставить содержимое", "hint": "использовать сохраненный путь и спросить, копировать или переместить" },
+        { "key": "clipboard", "label": "Показать буфер", "hint": "показать сохраненные путь и имя" },
+        { "key": "clipboard-clear", "label": "Очистить буфер", "hint": "удалить значение, сохраненное Xzp" },
+        { "key": "search", "label": "Искать файлы или папки", "hint": "быстро находить по имени или шаблону" },
+        { "key": "explain", "label": "Объяснить команду", "hint": "кратко показать использование, риск и заметки" },
+        { "key": "tree", "label": "Показать дерево пути", "hint": "показать полную структуру и отметить проекты" },
+        { "key": "safe-shell", "label": "Войти в безопасный режим", "hint": "открыть проект с правильным окружением" },
+        { "key": "version", "label": "Показать версию Xzp", "hint": "сравнить локальную и опубликованную версии" },
+        { "key": "settings", "label": "Настройки и функции", "hint": "включать доп. возможности, платформу и prompt" },
+        { "key": "help", "label": "Показать справку", "hint": "показать команды и примеры" },
+        { "key": "exit", "label": "Выйти", "hint": "закрыть меню" }
+      ]
+    },
+    "locale": {
+      "title": "Язык",
+      "prompt": "Язык [1-{count}, Enter=1]: ",
+      "options": [
+        { "key": "co_es", "label": "Испанский (Колумбия)", "usage": "locale проекта по умолчанию" },
+        { "key": "en", "label": "English", "usage": "базовый интерфейс на английском" },
+        { "key": "ru", "label": "Русский", "usage": "базовый интерфейс на русском" },
+        { "key": "back", "label": "Назад" }
+      ]
+    },
+    "settings": {
+      "title": "Настройки Xzp",
+      "prompt": "Настройка [1-{count}, Enter=1]: ",
+      "intro": "Включай только то, что действительно хочешь видеть каждый день.",
+      "options": {
+        "platformMode": { "label": "Режим платформы", "usage": "выбери auto, termux или linux" },
+        "androidShortcut": { "label": "Быстрый доступ", "usage": "разрешает xzp -a в Termux или Linux" },
+        "projectBadge": { "label": "Определение проекта и цвет", "usage": "показывает язык и цвет внутри Xzp" },
+        "promptContextPosition": { "label": "Положение контекста prompt", "usage": "выбери справа, inline рядом с путем или выключено" },
+        "promptTheme": { "label": "Тема prompt", "usage": "выбери ocean, forest, ember или mono" },
+        "smartProjectInstall": { "label": "Безопасная установка проекта", "usage": "спасает установки и использует безопасный режим по языку" },
+        "menuVisualMode": { "label": "Визуальный режим меню", "usage": "выбери cards или compact для более плотных терминалов" }
+      }
+    },
+    "promptContextPosition": {
+      "title": "Положение контекста prompt",
+      "prompt": "Положение [1-{count}, Enter=1]: ",
+      "options": [
+        { "key": "right", "label": "Справа от prompt", "usage": "показывает [PYTHON] или [NODE] справа" },
+        { "key": "inline", "label": "Inline рядом с путем", "usage": "показывает Xzp@android /путь [PYTHON] в той же строке" },
+        { "key": "off", "label": "Скрыть контекст", "usage": "не показывает badge проекта в prompt" },
+        { "key": "back", "label": "Назад" }
+      ]
+    },
+    "platformMode": {
+      "title": "Режим платформы",
+      "prompt": "Режим [1-{count}, Enter=1]: ",
+      "options": [
+        { "key": "auto", "label": "Auto", "usage": "определяет Termux или Linux по реальному окружению" },
+        { "key": "termux", "label": "Режим Termux", "usage": "включает поведение для Android storage и Termux" },
+        { "key": "linux", "label": "Режим Linux", "usage": "отключает Android и предполагает чистую среду Linux" },
+        { "key": "back", "label": "Назад" }
+      ]
+    },
+    "featureToggle": {
+      "enableLabel": "Включить",
+      "disableLabel": "Выключить",
+      "disableUsage": "скрывает {feature}, пока ты не включишь его снова",
+      "prompt": "Действие [1-{count}, Enter=3]: "
+    },
+    "promptTheme": {
+      "title": "Тема prompt",
+      "prompt": "Тема [1-{count}, Enter=1]: ",
+      "options": [
+        { "key": "ocean", "label": "Ocean", "usage": "чистые синие тона и читаемый badge" },
+        { "key": "forest", "label": "Forest", "usage": "зеленые тона и более мягкий вид" },
+        { "key": "ember", "label": "Ember", "usage": "теплый тон для выделения действий" },
+        { "key": "mono", "label": "Mono", "usage": "более сдержанный и прямой вывод" },
+        { "key": "back", "label": "Назад" }
+      ]
+    },
+    "menuVisualMode": {
+      "title": "Визуальный режим меню",
+      "prompt": "Режим [1-{count}, Enter=1]: ",
+      "options": [
+        { "key": "cards", "label": "Cards", "usage": "более широкие панели с визуальными подсказками" },
+        { "key": "compact", "label": "Compact", "usage": "более плотный режим для узких терминалов" },
+        { "key": "back", "label": "Назад" }
+      ]
+    },
+    "pasteAction": {
+      "title": "Действие при вставке",
+      "prompt": "Действие [1-{count}, Enter=1]: ",
+      "intro": "Буфер Xzp хранит путь к файлу или папке.",
+      "options": [
+        { "key": "copy", "label": "Копировать", "usage": "дублирует файл или папку в текущий путь" },
+        { "key": "move", "label": "Переместить", "usage": "перемещает файл или папку в текущий путь" }
+      ]
+    },
+    "searchPattern": {
+      "question": "Шаблон для поиска: ",
+      "required": "Нужно ввести что-то для поиска."
+    },
+    "treeTarget": {
+      "question": "Путь для показа [Enter=.]: "
+    },
+    "navigator": {
+      "controls": "  ↑/↓ двигаться  ·  Enter/→ войти  ·  Esc/← вверх  ·  Ctrl+G использовать путь",
+      "currentPath": "  Текущий путь  {path}",
+      "page": "  Страница {page}/{total}",
+      "useCurrentFolder": "Использовать эту папку",
+      "useCurrentFolderHint": "Открывает shell здесь и копирует этот путь в буфер Xzp.",
+      "goParentHint": "Подняться в родительскую папку.",
+      "detectedProject": "Обнаружен проект",
+      "navigableFolder": "Доступная папка"
+    }
+  },
+  "output": {
+    "help": {
+      "bannerTitle": "Xzp CLI",
+      "bannerLine1": "Исследование, понимание и подготовка проектов из Termux или Linux.",
+      "bannerLine2": "Android storage появляется, если это разрешает режим платформы.",
+      "bannerLine3": "Используй `xzp -h <команда>`, чтобы посмотреть справку по конкретной команде.",
+      "unknownTopic": "Не удалось распознать \"{topic}\"",
+      "configPath": "Конфиг  {path}",
+      "commandTitle": "Справка · {command}",
+      "resolvedFrom": "Определено по  {topic}",
+      "none": "нет",
+      "mainCommandsTitle": "Основные команды",
+      "mainCommands": [
+        "xzp -m                 визуальное меню",
+        "xzp -v                 локальная и опубликованная версия",
+        "xzp --agent-status     статус режима агента",
+        "xzp --doctor           проверить окружение и инструменты",
+        "xzp --inspect          кратко показать текущий проект",
+        "xzp --report-error     подготовить отчет для сопровождающего",
+        "xzp -c                 копировать текущий путь или имя",
+        "xzp -p                 вставить или переместить сохраненное",
+        "xzp -k                 показать буфер Xzp",
+        "xzp -K                 очистить буфер Xzp",
+        "xzp -x                 контекст текущего проекта",
+        "xzp -x --profile       контекст с профилем стека",
+        "xzp -x --list-favorites постоянное избранное",
+        "xzp -b \"файл\"         искать файлы или папки",
+        "xzp -e ls              объяснить команду",
+        "xzp -t src             полное дерево пути",
+        "xzp -i                 установить зависимости обнаруженного проекта",
+        "xzp -r                 открыть безопасный режим проекта",
+        "xzp -r main.py bot     сохранить безопасный ярлык",
+        "xzp -r bot             запустить сохраненный ярлык",
+        "xzp -a                 быстрый доступ к Android или Linux"
+      ],
+      "quickUsageTitle": "Быстрое использование",
+      "quickUsage": [
+        "xzp --doctor",
+        "xzp --inspect",
+        "xzp --report-error",
+        "xzp --agent-status",
+        "xzp -c --relative",
+        "xzp -c --json",
+        "xzp -c --name",
+        "xzp -b \"*.js\" --scope actual",
+        "xzp -b \"api client\" --semantic --exclude dist",
+        "xzp -t . --depth 3 --scope actual",
+        "xzp -t . --summary --compare src",
+        "xzp -x",
+        "xzp -p --preview --into ./tmp",
+        "xzp -r app.py my-app",
+        "xzp -r --list-safe-shortcuts",
+        "xzp --prompt-context",
+        "xzp --prompt-project-root",
+        "xzp --prompt-project-path"
+      ],
+      "labels": {
+        "usage": "Использование",
+        "aliases": "Алиасы",
+        "details": "Подробности",
+        "related": "Связанные"
+      }
+    },
+    "search": {
+      "noMatches": "Совпадений не найдено."
+    },
+    "explain": {
+      "commandLabel": "Команда",
+      "describeLabel": "Описание",
+      "usageLabel": "Базовое использование"
+    }
+  }
+}

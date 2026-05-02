@@ -1,0 +1,5 @@
+Xzp@linux ~/work/xzp [NODE]
+> xzp -x --profile
+
+Contexto: xzp [NODE]
+Perfil  : runtime:node | root:xzp | manager:npm-compatible | signal:explicit

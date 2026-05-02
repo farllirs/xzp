@@ -1,0 +1,137 @@
+{
+  "ls": {
+    "summary": "Lista archivos y carpetas.",
+    "usage": "ls\nls -lah\nls /sdcard/Download",
+    "risk": "bajo",
+    "notes": [
+      "Usa -l para ver detalles y -a para mostrar ocultos.",
+      "En Termux, ls -lah es una combinacion util para inspeccionar carpetas."
+    ]
+  },
+  "cd": {
+    "summary": "Cambia de carpeta actual.",
+    "usage": "cd carpeta\ncd ..\ncd ~\ncd /sdcard",
+    "risk": "bajo",
+    "notes": [
+      "cd .. sube un nivel.",
+      "cd ~ vuelve a tu home de Termux."
+    ]
+  },
+  "rm": {
+    "summary": "Borra archivos o carpetas.",
+    "usage": "rm archivo.txt\nrm -r carpeta",
+    "risk": "alto",
+    "notes": [
+      "No manda a papelera. Borra directamente.",
+      "Ten cuidado con rm -r y especialmente con rutas fuera de tu carpeta actual."
+    ]
+  },
+  "cp": {
+    "summary": "Copia archivos o carpetas.",
+    "usage": "cp origen destino\ncp -r carpeta_a carpeta_b",
+    "risk": "medio",
+    "notes": [
+      "Usa -r para copiar carpetas completas.",
+      "Puede sobrescribir si el destino ya existe."
+    ]
+  },
+  "mv": {
+    "summary": "Mueve o renombra archivos y carpetas.",
+    "usage": "mv origen destino\nmv nombre_viejo nombre_nuevo",
+    "risk": "medio",
+    "notes": [
+      "Sirve tanto para mover como para renombrar.",
+      "Si el destino existe, puedes sobrescribir sin querer."
+    ]
+  },
+  "pkg": {
+    "summary": "Instala y gestiona paquetes en Termux.",
+    "usage": "pkg search git\npkg install git\npkg update && pkg upgrade",
+    "risk": "medio",
+    "notes": [
+      "Es la forma comoda de usar apt dentro de Termux.",
+      "Antes de instalar mucho, conviene actualizar repos y paquetes."
+    ]
+  },
+  "git": {
+    "summary": "Control de versiones y clonacion de repositorios.",
+    "usage": "git clone URL\ngit status\ngit add .\ngit commit -m \"mensaje\"",
+    "risk": "medio",
+    "notes": [
+      "git status es el comando base para saber en que estado estas.",
+      "No uses comandos destructivos si no sabes exactamente que hacen."
+    ]
+  },
+  "find": {
+    "summary": "Busca archivos y carpetas desde terminal.",
+    "usage": "find . -name \"*.js\"\nfind /sdcard -iname \"foto*\"",
+    "risk": "bajo",
+    "notes": [
+      "Puede ser lento en rutas muy grandes.",
+      "Xzp -b esta pensado precisamente para evitarte recordar esta sintaxis."
+    ]
+  },
+  "pwd": {
+    "summary": "Muestra la ruta actual donde estas parado.",
+    "usage": "pwd",
+    "risk": "bajo",
+    "notes": [
+      "Es util para confirmar si Xzp te movio al root del proyecto o al workspace seguro.",
+      "En Android storage puede mostrar /storage/emulated/0 aunque entres por /sdcard."
+    ]
+  },
+  "mkdir": {
+    "summary": "Crea carpetas nuevas.",
+    "usage": "mkdir carpeta\nmkdir -p ruta/larga",
+    "risk": "bajo",
+    "notes": [
+      "Usa -p para crear rutas completas sin error si parte del camino ya existe.",
+      "No borra ni sobrescribe contenido existente."
+    ]
+  },
+  "npm": {
+    "summary": "Gestiona dependencias y scripts de proyectos Node.",
+    "usage": "npm install\nnpm ci\nnpm run dev",
+    "risk": "medio",
+    "notes": [
+      "npm ci es mejor cuando ya existe package-lock.json y quieres una instalacion reproducible.",
+      "En Android storage Xzp puede rescatar proyectos Node en un workspace seguro dentro de HOME."
+    ]
+  },
+  "node": {
+    "summary": "Ejecuta codigo JavaScript y proyectos Node.",
+    "usage": "node app.js\nnode -v\nnode -e \"console.log(1)\"",
+    "risk": "bajo",
+    "notes": [
+      "Si el proyecto usa dependencias locales, entra primero al root correcto o al workspace seguro.",
+      "Xzp usa node tambien para correr su propio CLI."
+    ]
+  },
+  "python": {
+    "summary": "Ejecuta scripts Python e inspecciona el runtime actual.",
+    "usage": "python bot.py\npython -V\npython -m pip list",
+    "risk": "bajo",
+    "notes": [
+      "Dentro de safe-shell puede apuntar a un venv preparado por Xzp.",
+      "python -m pip suele ser mas fiable que usar pip suelto."
+    ]
+  },
+  "pip": {
+    "summary": "Instala y gestiona paquetes Python.",
+    "usage": "pip install paquete\npip install -r requirements.txt",
+    "risk": "medio",
+    "notes": [
+      "En proyectos sensibles conviene usar venv o el modo seguro de Xzp.",
+      "Si estas en Android storage, Xzp puede rescatar la instalacion automaticamente en ciertos casos."
+    ]
+  },
+  "composer": {
+    "summary": "Instala dependencias y maneja proyectos PHP.",
+    "usage": "composer install\ncomposer update\ncomposer dump-autoload",
+    "risk": "medio",
+    "notes": [
+      "En Xzp, composer puede ejecutarse dentro de un workspace seguro para evitar problemas de Android storage.",
+      "composer update cambia versiones; composer install intenta respetar composer.lock."
+    ]
+  }
+}
