@@ -4,6 +4,8 @@ import readline, { emitKeypressEvents } from 'node:readline';
 import { stdin as input, stdout as output } from 'node:process';
 import { getDefaultLocale, t, tList } from '../core/i18n.js';
 import { detectProjectDirectorySignature } from '../utils/project-context.js';
+import { renderGridScreen, computeGridCols, computeVisibleCount, computeVisibleStart } from './renderers/grid.js';
+import { getActiveVisualTheme, resolveThemePalette, colorize as colorizeTheme } from './output.js';
 
 const ANSI = {
   altScreenOn: '\x1b[?1049h',
@@ -32,6 +34,8 @@ const DIRECTORY_SIGNATURE_CACHE_LIMIT = 200;
 let activeInteractiveSession = null;
 let interactiveSessionCounter = 0;
 let ACTIVE_PROMPT_LOCALE = getDefaultLocale();
+let isCleaningUp = false; // Guard contra re-entrancy en cleanup
+const INTERACTIVE_TIMEOUT_MS = 300_000; // 5 min max por sesión interactiva
 
 export async function chooseSearchScope(options, locale = getDefaultLocale()) {
   ACTIVE_PROMPT_LOCALE = locale;
@@ -43,6 +47,7 @@ export async function chooseSearchScope(options, locale = getDefaultLocale()) {
     prompt: t(locale, 'prompt.searchScope.prompt', 'Scope [1-{count}, Enter=1]: ', { count: options.length }),
     errorMessage: t(locale, 'prompt.common.invalidOptionOrKey', 'Opcion no valida. Usa un numero o una clave valida.'),
     directMatch: (answer) => options.find((option) => option.key === answer.toLowerCase())?.key,
+    visualTheme: getActiveVisualTheme(),
   });
 }
 
@@ -58,23 +63,43 @@ export async function chooseExplainTopic(entries, locale = getDefaultLocale()) {
     prompt: t(locale, 'prompt.explainTopic.prompt', 'Tema [1-{count}, nombre, Enter=1]: ', { count: topics.length }),
     errorMessage: t(locale, 'prompt.explainTopic.error', 'Opcion no valida. Usa un numero o el nombre del comando.'),
     directMatch: (answer) => topics.find((option) => option.topic === answer.toLowerCase())?.topic,
+    visualTheme: getActiveVisualTheme(),
   });
 }
 
-export async function chooseMenuAction(visualMode = 'cards', locale = getDefaultLocale()) {
+export async function chooseMainMenuAction(visualMode = 'cards', locale = getDefaultLocale()) {
   ACTIVE_PROMPT_LOCALE = locale;
-  const options = tList(locale, 'prompt.menu.options', []).map((option) => ({ ...option }));
+  const options = tList(locale, 'prompt.mainMenu.options', []).map((option) => ({ ...option }));
 
   return chooseNumericOption({
-    title: t(locale, 'prompt.menu.title', 'Xzp Menu'),
+    title: t(locale, 'prompt.mainMenu.title', 'Menu Principal'),
     options,
     getValue: (option) => option.key,
     getLines: (option) => [option.label, option.hint],
-    prompt: t(locale, 'prompt.menu.prompt', 'Opcion [1-{count}, Enter=1]: ', { count: options.length }),
+    prompt: t(locale, 'prompt.mainMenu.prompt', 'Opcion [1-{count}, Enter=1]: ', { count: options.length }),
     errorMessage: t(locale, 'prompt.common.invalidMenuOption', 'Opcion no valida. Usa un numero valido del menu.'),
     directMatch: (answer) => options.find((option) => option.key === answer.toLowerCase())?.key,
     style: visualMode === 'compact' ? 'simple' : 'card',
-    introLines: [t(locale, 'prompt.menu.intro', 'Centro rapido para navegar, revisar version y entrar al modo seguro.')],
+    introLines: [t(locale, 'prompt.mainMenu.intro', 'Elige una categoria para comenzar.')],
+    visualTheme: getActiveVisualTheme(),
+  });
+}
+
+export async function chooseFunctionAction(visualMode = 'cards', locale = getDefaultLocale()) {
+  ACTIVE_PROMPT_LOCALE = locale;
+  const options = tList(locale, 'prompt.functions.options', []).map((option) => ({ ...option }));
+
+  return chooseNumericOption({
+    title: t(locale, 'prompt.functions.title', 'Funciones'),
+    options,
+    getValue: (option) => option.key,
+    getLines: (option) => [option.label, option.hint],
+    prompt: t(locale, 'prompt.functions.prompt', 'Funcion [1-{count}, Enter=1]: ', { count: options.length }),
+    errorMessage: t(locale, 'prompt.common.invalidMenuOption', 'Opcion no valida. Usa un numero valido del menu.'),
+    directMatch: (answer) => options.find((option) => option.key === answer.toLowerCase())?.key,
+    style: visualMode === 'compact' ? 'simple' : 'card',
+    introLines: [t(locale, 'prompt.functions.intro', 'Selecciona una funcion para ejecutar al instante.')],
+    visualTheme: getActiveVisualTheme(),
   });
 }
 
@@ -101,23 +126,33 @@ export async function chooseLocale(currentLocale, locale = getDefaultLocale()) {
     directMatch: (answer) => options.find((option) => option.key === answer.toLowerCase())?.key,
     style: 'card',
     introLines: [t(locale, 'prompt.common.currentValue', 'Actual: {value}', { value: currentLocale || 'co_es' })],
+    visualTheme: getActiveVisualTheme(),
   });
 }
 
 export async function chooseSettingsAction(config, visualMode = 'cards', locale = getDefaultLocale()) {
   ACTIVE_PROMPT_LOCALE = locale;
   const options = [
+    // ── 🎨 Theme Studio (todo en uno) ──
+    {
+      key: 'theme-studio',
+      label: t(locale, 'prompt.settings.options.themeStudio.label', '🎨 Theme Studio'),
+      status: t(locale, 'prompt.settings.options.themeStudio.status', 'colores · disposición · prompt'),
+      usage: t(locale, 'prompt.settings.options.themeStudio.usage', 'Personaliza colores, grid, prompt y más en un solo lugar.'),
+    },
+    // ── 💻 Plataforma ──
     {
       key: 'platform-mode',
       label: t(locale, 'prompt.settings.options.platformMode.label', 'Modo de plataforma'),
       status: formatPlatformMode(config.runtime?.platformMode || 'auto', locale),
       usage: t(locale, 'prompt.settings.options.platformMode.usage', 'elige auto, termux o linux'),
     },
+    // ── 🔧 Caracteristicas ──
     {
       key: 'toggle-android-shortcut',
-      label: t(locale, 'prompt.settings.options.androidShortcut.label', 'Acceso rapido'),
+      label: t(locale, 'prompt.settings.options.androidShortcut.label', 'Acceso rapido Android'),
       status: formatStatus(config.features.androidShortcut, locale),
-      usage: t(locale, 'prompt.settings.options.androidShortcut.usage', 'permite xzp -a en Termux o Linux'),
+      usage: t(locale, 'prompt.settings.options.androidShortcut.usage', 'habilita xzp -a'),
     },
     {
       key: 'toggle-project-badge',
@@ -126,28 +161,17 @@ export async function chooseSettingsAction(config, visualMode = 'cards', locale 
       usage: t(locale, 'prompt.settings.options.projectBadge.usage', 'muestra lenguaje y color dentro de Xzp'),
     },
     {
-      key: 'prompt-context-position',
-      label: t(locale, 'prompt.settings.options.promptContextPosition.label', 'Posicion del contexto del prompt'),
-      status: formatPromptPosition(config.ui?.promptContextPosition || 'right', locale),
-      usage: t(locale, 'prompt.settings.options.promptContextPosition.usage', 'elige derecha, inline junto a la ruta o desactivado'),
-    },
-    {
-      key: 'prompt-theme',
-      label: t(locale, 'prompt.settings.options.promptTheme.label', 'Tema visual del prompt'),
-      status: formatPromptTheme(config.ui?.promptTheme || 'ocean'),
-      usage: t(locale, 'prompt.settings.options.promptTheme.usage', 'elige ocean, forest, ember o mono'),
-    },
-    {
       key: 'toggle-smart-project-install',
       label: t(locale, 'prompt.settings.options.smartProjectInstall.label', 'Instalacion segura de proyectos'),
       status: formatStatus(config.features.smartProjectInstall, locale),
       usage: t(locale, 'prompt.settings.options.smartProjectInstall.usage', 'rescata instalaciones y usa modo seguro por lenguaje'),
     },
+    // ── ⚙️ Android ──
     {
-      key: 'menu-visual-mode',
-      label: t(locale, 'prompt.settings.options.menuVisualMode.label', 'Modo visual del menu'),
-      status: config.menu?.visualMode || 'cards',
-      usage: t(locale, 'prompt.settings.options.menuVisualMode.usage', 'elige cards o compact para terminales mas densas'),
+      key: 'android-settings',
+      label: t(locale, 'prompt.settings.options.androidSettings.label', 'Android / Termux'),
+      status: 'configurar',
+      usage: t(locale, 'prompt.settings.options.androidSettings.usage', 'accesos rapidos, apariencia del navegador, integracion con agente'),
     },
     {
       key: 'back',
@@ -175,6 +199,7 @@ export async function chooseSettingsAction(config, visualMode = 'cards', locale 
     directMatch: (answer) => options.find((option) => option.key === answer.toLowerCase())?.key,
     style: visualMode === 'compact' ? 'simple' : 'card',
     introLines: [t(locale, 'prompt.settings.intro', 'Activa solo lo que quieras ver todos los dias.')],
+    visualTheme: getActiveVisualTheme(),
   });
 }
 
@@ -201,6 +226,7 @@ export async function choosePromptContextPosition(currentPosition, locale = getD
     directMatch: (answer) => options.find((option) => option.key === answer.toLowerCase())?.key,
     style: 'card',
     introLines: [t(locale, 'prompt.common.currentValue', 'Actual: {value}', { value: formatPromptPosition(currentPosition, locale) })],
+    visualTheme: getActiveVisualTheme(),
   });
 }
 
@@ -227,6 +253,7 @@ export async function choosePlatformMode(currentMode, locale = getDefaultLocale(
     directMatch: (answer) => options.find((option) => option.key === answer.toLowerCase())?.key,
     style: 'card',
     introLines: [t(locale, 'prompt.common.currentValue', 'Actual: {value}', { value: formatPlatformMode(currentMode, locale) })],
+    visualTheme: getActiveVisualTheme(),
   });
 }
 
@@ -271,6 +298,7 @@ export async function chooseFeatureToggle(currentValue, featureName, description
     defaultIndex: 2,
     style: 'card',
     introLines: [t(locale, 'prompt.common.currentValue', 'Actual: {value}', { value: formatStatus(currentValue, locale) })],
+    visualTheme: getActiveVisualTheme(),
   });
 }
 
@@ -297,6 +325,7 @@ export async function choosePromptTheme(currentTheme, locale = getDefaultLocale(
     directMatch: (answer) => options.find((option) => option.key === answer.toLowerCase())?.key,
     style: 'card',
     introLines: [t(locale, 'prompt.common.currentValue', 'Actual: {value}', { value: formatPromptTheme(currentTheme) })],
+    visualTheme: getActiveVisualTheme(),
   });
 }
 
@@ -323,6 +352,193 @@ export async function chooseMenuVisualMode(currentMode, locale = getDefaultLocal
     directMatch: (answer) => options.find((option) => option.key === answer.toLowerCase())?.key,
     style: 'card',
     introLines: [t(locale, 'prompt.common.currentValue', 'Actual: {value}', { value: currentMode || 'cards' })],
+    visualTheme: getActiveVisualTheme(),
+  });
+}
+
+export async function chooseVisualTheme(currentTheme, locale = getDefaultLocale()) {
+  ACTIVE_PROMPT_LOCALE = locale;
+  const options = [
+    { key: 'classic', label: 'Classic', usage: 'list-based navigation, clean and traditional' },
+    { key: 'panels', label: 'Panels', usage: 'card-based navigation with selection glow and status bar' },
+    { key: 'minimal', label: 'Minimal', usage: 'ultra-compact list, no borders, maximum density' },
+    { key: 'back', label: t(locale, 'prompt.common.back', 'Back') },
+  ];
+
+  return chooseNumericOption({
+    title: t(locale, 'prompt.visualTheme.title', 'Visual Theme'),
+    options,
+    getValue: (option) => option.key,
+    getLines: (option) => {
+      if (option.key === 'back') {
+        return [option.label];
+      }
+      return [
+        option.label,
+        t(locale, 'prompt.common.usagePrefix', 'Usage: ') + option.usage,
+      ];
+    },
+    prompt: t(locale, 'prompt.visualTheme.prompt', 'Theme [1-{count}, Enter=1]: ', { count: options.length }),
+    errorMessage: t(locale, 'prompt.common.invalidOneToFour', 'Invalid option. Use 1, 2, 3, or 4.'),
+    directMatch: (answer) => options.find((option) => option.key === answer.toLowerCase())?.key,
+    style: 'card',
+    introLines: [t(locale, 'prompt.common.currentValue', 'Current: {value}', { value: currentTheme || 'classic' })],
+    visualTheme: getActiveVisualTheme(),
+  });
+}
+
+export async function chooseColorMode(currentMode, locale = getDefaultLocale()) {
+  ACTIVE_PROMPT_LOCALE = locale;
+  const options = [
+    { key: 'default', label: 'Default', usage: 'use the theme\'s built-in colors' },
+    { key: 'system', label: 'System', usage: 'use terminal default colors (no ANSI codes)' },
+    { key: 'custom', label: 'Custom', usage: 'pick individual colors via hex codes' },
+    { key: 'back', label: t(locale, 'prompt.common.back', 'Back') },
+  ];
+
+  return chooseNumericOption({
+    title: t(locale, 'prompt.colorMode.title', 'Color Mode'),
+    options,
+    getValue: (option) => option.key,
+    getLines: (option) => {
+      if (option.key === 'back') {
+        return [option.label];
+      }
+      return [
+        option.label,
+        t(locale, 'prompt.common.usagePrefix', 'Usage: ') + option.usage,
+      ];
+    },
+    prompt: t(locale, 'prompt.colorMode.prompt', 'Mode [1-{count}, Enter=1]: ', { count: options.length }),
+    errorMessage: t(locale, 'prompt.common.invalidOneToFour', 'Invalid option. Use 1, 2, 3, or 4.'),
+    directMatch: (answer) => options.find((option) => option.key === answer.toLowerCase())?.key,
+    style: 'card',
+    introLines: [t(locale, 'prompt.common.currentValue', 'Current: {value}', { value: currentMode || 'default' })],
+    visualTheme: getActiveVisualTheme(),
+  });
+}
+
+export async function chooseGridOptionInteractive({
+  title,
+  options,
+  getValue,
+  getLines,
+  errorMessage,
+  prompt,
+  directMatch,
+  defaultIndex = 0,
+  introLines = [],
+  locale = ACTIVE_PROMPT_LOCALE,
+}) {
+  const cols = computeGridCols();
+  const maxVisible = computeVisibleCount(cols);
+  const state = {
+    selectedIndex: Math.min(defaultIndex, options.length - 1),
+    visibleStart: 0,
+  };
+  state.visibleStart = computeVisibleStart(state.selectedIndex, 0, cols, options.length);
+
+  const session = beginInteractiveSession();
+  emitKeypressEvents(input);
+  const previousRawMode = Boolean(input.isRaw);
+  if (typeof input.setRawMode === 'function') {
+    input.setRawMode(true);
+  }
+  input.resume();
+
+  return await new Promise((resolve, reject) => {
+    let closed = false;
+    const timeoutId = setTimeout(() => {
+      if (!closed) {
+        fail(new Error('Timeout: la sesión interactiva superó el límite de tiempo.'));
+      }
+    }, INTERACTIVE_TIMEOUT_MS);
+
+    const cleanup = () => {
+      if (closed) return;
+      closed = true;
+      clearTimeout(timeoutId);
+      try { input.off('keypress', onKeypress); } catch {}
+      if (typeof input.setRawMode === 'function') {
+        try { input.setRawMode(previousRawMode); } catch {}
+      }
+      try { input.pause(); } catch {}
+      endInteractiveSession(session.id);
+      if (input.isTTY && output.isTTY) {
+        output.write(ANSI.cursorShow + ANSI.cursorHome + ANSI.clearScreen + ANSI.clearDown);
+      }
+    };
+    session.cleanup = cleanup;
+
+    const finish = (value) => { cleanup(); resolve(value); };
+    const fail = (error) => { cleanup(); reject(error); };
+
+    const render = () => {
+      if (!isInteractiveSessionActive(session.id)) return;
+      if (input.isTTY && output.isTTY) {
+        output.write(ANSI.cursorHome + ANSI.clearScreen + ANSI.clearDown);
+      }
+      const items = options.slice(state.visibleStart, state.visibleStart + maxVisible);
+      const lines = renderGridScreen({
+        title,
+        options,     // full array for status bar
+        items,       // visible slice
+        getLines,
+        introLines,
+        selectedIndex: state.selectedIndex,
+        cols,
+        visibleStartIndex: state.visibleStart,
+      });
+      const out = lines.join('\n') + '\n' + ANSI.cursorHide;
+      if (output.isTTY) {
+        output.write(out);
+      } else {
+        output.write(lines.join('\n') + '\n');
+      }
+    };
+
+    const navigate = (newIdx) => {
+      state.selectedIndex = Math.max(0, Math.min(options.length - 1, newIdx));
+      state.visibleStart = computeVisibleStart(state.selectedIndex, state.visibleStart, cols, options.length);
+      render();
+    };
+
+    const onKeypress = (_str, key) => {
+      if (key?.ctrl && key.name === 'c') {
+        finish(null);
+        return;
+      }
+      if (key?.name === 'return') {
+        const current = options[state.selectedIndex];
+        if (current) finish(getValue(current));
+        return;
+      }
+      if (key?.name === 'escape') {
+        const backOpt = options.find((o) => o.key === 'back' || o.key === 'exit');
+        if (backOpt) { finish(getValue(backOpt)); return; }
+        finish(null);
+        return;
+      }
+      if (key?.name === 'up') {
+        navigate(state.selectedIndex - cols);
+        return;
+      }
+      if (key?.name === 'down') {
+        navigate(state.selectedIndex + cols);
+        return;
+      }
+      if (key?.name === 'left') {
+        navigate(state.selectedIndex - 1);
+        return;
+      }
+      if (key?.name === 'right') {
+        navigate(state.selectedIndex + 1);
+        return;
+      }
+    };
+
+    input.on('keypress', onKeypress);
+    render();
   });
 }
 
@@ -343,6 +559,32 @@ export async function choosePasteAction(locale = getDefaultLocale()) {
     directMatch: (answer) => options.find((option) => option.key === answer.toLowerCase())?.key,
     style: 'card',
     introLines: [t(locale, 'prompt.pasteAction.intro', 'El portapapeles de Xzp guarda una ruta de archivo o carpeta.')],
+    visualTheme: getActiveVisualTheme(),
+  });
+}
+
+export async function chooseLinuxDistro(distros = [], locale = getDefaultLocale()) {
+  ACTIVE_PROMPT_LOCALE = locale;
+  const options = distros.map((distro) => ({
+    key: distro.name,
+    label: distro.name,
+    path: distro.path,
+  }));
+
+  return chooseNumericOption({
+    title: t(locale, 'prompt.linuxDistro.title', 'Distribucion Linux'),
+    options,
+    getValue: (option) => option.key,
+    getLines: (option) => [
+      option.label,
+      t(locale, 'prompt.common.usagePrefix', 'Uso    : ') + option.path,
+    ],
+    prompt: t(locale, 'prompt.linuxDistro.prompt', 'Distro [1-{count}, Enter=1]: ', { count: options.length }),
+    errorMessage: t(locale, 'prompt.common.invalidOptionOrKey', 'Opcion no valida. Usa un numero o una clave valida.'),
+    directMatch: (answer) => options.find((option) => option.key === answer.toLowerCase())?.key,
+    style: 'card',
+    introLines: [t(locale, 'prompt.linuxDistro.intro', 'Elige a que rootfs de proot-distro quieres pegar.')],
+    visualTheme: getActiveVisualTheme(),
   });
 }
 
@@ -376,6 +618,7 @@ export async function chooseUpdateAction(localVersion, latestVersion, locale = g
     directMatch: (answer) => options.find((o) => o.key === answer.toLowerCase())?.key,
     style: 'card',
     introLines: [`Nueva version disponible: ${latestVersion}`, `Tu version actual: ${localVersion}`],
+    visualTheme: getActiveVisualTheme(),
   });
 }
 
@@ -445,19 +688,61 @@ export async function chooseDirectoryNavigator({
     let closed = false;
     let actionQueue = Promise.resolve();
 
+    // Robust SIGINT handling (critical for Termux stability)
+    const sigintHandler = () => {
+      cleanup();
+      reject(new Error('Operación cancelada por el usuario'));
+    };
+    process.once('SIGINT', sigintHandler);
+    const timeoutId = setTimeout(() => {
+      if (!closed && !isCleaningUp) {
+        fail(new Error('Timeout: el navegador superó el límite de tiempo.'));
+      }
+    }, INTERACTIVE_TIMEOUT_MS);
+
     const cleanup = () => {
-      if (closed) {
+      if (closed || isCleaningUp) {
         return;
       }
+      isCleaningUp = true;
+      clearTimeout(timeoutId);
+
+      try {
+        process.removeListener('SIGINT', sigintHandler);
+      } catch {}
+
+      try {
+        if (typeof onKeypress === 'function') {
+          input.off('keypress', onKeypress);
+        }
+      } catch {}
+
+      // Restore raw mode — critical for Termux
+      if (typeof input.setRawMode === 'function') {
+        try {
+          input.setRawMode(previousRawMode);
+        } catch (e) {
+          // Some Termux builds throw on setRawMode(false)
+        }
+      }
+
+      try {
+        input.pause();
+      } catch {}
+
+      endInteractiveSession(session.id);
+
+      // Restore cursor and screen state
+      try {
+        output.write(ANSI.cursorShow);
+      } catch {}
+
+      try {
+        clearScreenArea(0);
+      } catch {}
 
       closed = true;
-      input.off('keypress', onKeypress);
-      if (typeof input.setRawMode === 'function') {
-        input.setRawMode(previousRawMode);
-      }
-      input.pause();
-      endInteractiveSession(session.id);
-      clearScreenArea(0);
+      isCleaningUp = false;
     };
     session.cleanup = cleanup;
 
@@ -584,7 +869,7 @@ export async function chooseDirectoryNavigator({
     const onKeypress = (_str, key) => {
       runSerialAction(async () => {
         if (key?.ctrl && key.name === 'c') {
-          fail(new Error(t(locale, 'prompt.common.operationCanceled', 'Operacion cancelada.')));
+          cleanup(); resolve(null);
           return;
         }
 
@@ -671,7 +956,7 @@ export async function chooseDirectoryNavigator({
   });
 }
 
-async function chooseNumericOption({
+export async function chooseNumericOption({
   title,
   options,
   getValue,
@@ -683,6 +968,8 @@ async function chooseNumericOption({
   style = 'simple',
   introLines = [],
   pageSize = 9,
+  locale = ACTIVE_PROMPT_LOCALE,
+  visualTheme,
 }) {
   if (!input.isTTY || !output.isTTY) {
     return chooseNumericOptionFallback({
@@ -699,6 +986,21 @@ async function chooseNumericOption({
     });
   }
 
+  if (visualTheme === 'panels') {
+    return chooseGridOptionInteractive({
+      title,
+      options,
+      getValue,
+      getLines,
+      errorMessage,
+      prompt,
+      directMatch,
+      defaultIndex,
+      introLines,
+      locale,
+    });
+  }
+
   return chooseNumericOptionInteractive({
     title,
     options,
@@ -710,6 +1012,7 @@ async function chooseNumericOption({
     style,
     introLines,
     pageSize,
+    locale,
   });
 }
 
@@ -766,6 +1069,7 @@ async function chooseNumericOptionInteractive({
   style,
   introLines,
   pageSize,
+  locale = ACTIVE_PROMPT_LOCALE,
 }) {
   const state = {
     pageIndex: 0,
@@ -798,18 +1102,36 @@ async function chooseNumericOptionInteractive({
 
   return await new Promise((resolve, reject) => {
     let closed = false;
+    const timeoutId = setTimeout(() => {
+      if (!closed) {
+        fail(new Error('Timeout: la sesión interactiva superó el límite de tiempo.'));
+      }
+    }, INTERACTIVE_TIMEOUT_MS);
 
     const cleanup = () => {
       if (closed) {
         return;
       }
-
       closed = true;
-      input.off('keypress', onKeypress);
+      clearTimeout(timeoutId);
+
+      // Remove keypress listener safely
+      try {
+        input.off('keypress', onKeypress);
+      } catch {}
+
+      // Restore raw mode safely
       if (typeof input.setRawMode === 'function') {
-        input.setRawMode(previousRawMode);
+        try {
+          input.setRawMode(previousRawMode);
+        } catch (e) {
+          // Termux sometimes throws on setRawMode(false) — safe to ignore
+        }
       }
-      input.pause();
+
+      try {
+        input.pause();
+      } catch {}
       endInteractiveSession(session.id);
       clearScreenArea(lineCount);
     };
@@ -878,7 +1200,7 @@ async function chooseNumericOptionInteractive({
 
     const onKeypress = (_str, key) => {
       if (key?.ctrl && key.name === 'c') {
-        fail(new Error(t(locale, 'prompt.common.operationCanceled', 'Operacion cancelada.')));
+        finish(null);
         return;
       }
 
@@ -898,7 +1220,7 @@ async function chooseNumericOptionInteractive({
           return;
         }
 
-        fail(new Error(t(locale, 'prompt.common.operationCanceled', 'Operacion cancelada.')));
+        finish(null);
         return;
       }
 
@@ -976,6 +1298,8 @@ async function chooseNumericOptionInteractive({
   });
 }
 
+const CARD_LABEL_MAX = 34; // max chars for option label in card list
+
 function renderOptionScreen({
   title,
   options,
@@ -988,32 +1312,34 @@ function renderOptionScreen({
   showPagination,
   typed = '',
 }) {
+  const pal = resolveThemePalette();
   const pageItems = getCurrentPage(options, pageIndex, pageSize);
   const totalPages = Math.max(1, Math.ceil(options.length / pageSize));
   const pageNumber = pageIndex + 1;
+  const displayTitle = truncateLine(title, 36);
 
   const frame = [
-    colorize('╭──────────────────────────────────────╮', 'steel'),
-    colorize('│ ' + title.padEnd(36, ' ') + ' │', 'ice', 'bold'),
-    colorize('╰──────────────────────────────────────╯', 'steel'),
-    colorize(
+    colorizeTheme('╭──────────────────────────────────────╮', pal.section),
+    colorizeTheme('│ ' + displayTitle.padEnd(36, ' ') + ' │', pal.title, 'bold'),
+    colorizeTheme('╰──────────────────────────────────────╯', pal.section),
+    colorizeTheme(
       t(ACTIVE_PROMPT_LOCALE, 'prompt.common.paginationHeader', '  Pagina {page}/{total}  ·  Flechas navegar  ·  Enter elegir  ·  Esc volver', {
         page: pageNumber,
         total: totalPages,
       }),
-      'slate',
+      pal.muted,
     ),
   ];
   if (showPagination) {
-    frame.push(colorize(t(ACTIVE_PROMPT_LOCALE, 'prompt.common.paginationFooter', '  ←/PgUp pagina anterior  ·  →/PgDn pagina siguiente'), 'slate'));
+    frame.push(colorizeTheme(t(ACTIVE_PROMPT_LOCALE, 'prompt.common.paginationFooter', '  ←/PgUp pagina anterior  ·  →/PgDn pagina siguiente'), pal.muted));
   }
   if (typed) {
-    frame.push(colorize(t(ACTIVE_PROMPT_LOCALE, 'prompt.common.activeFilter', '  Filtro activo  {value}', { value: typed }), 'steel'));
+    frame.push(colorizeTheme(t(ACTIVE_PROMPT_LOCALE, 'prompt.common.activeFilter', '  Filtro activo  {value}', { value: typed }), pal.section));
   }
   frame.push('');
 
   for (const line of introLines) {
-    frame.push(colorize('  ' + line, 'slate'));
+    frame.push(colorizeTheme('  ' + line, pal.muted));
   }
 
   if (introLines.length) {
@@ -1023,30 +1349,36 @@ function renderOptionScreen({
   pageItems.forEach((option, index) => {
     const lines = getLines(option);
     const selected = index === selectedIndex;
-    const tone = selected ? 'ice' : 'white';
-    const edge = selected ? colorize('▌', 'mint', 'bold') : colorize('·', 'slate');
+    const tone = selected ? pal.title : pal.text;
+    const edge = selected ? colorizeTheme('▌', pal.accent, 'bold') : colorizeTheme('·', pal.muted);
     const badge = selected
-      ? colorize(' ' + String(index + 1).padStart(2, '0') + ' ', 'mint', 'bold')
-      : colorize(' ' + String(index + 1).padStart(2, '0') + ' ', 'steel', 'bold');
+      ? colorizeTheme(' ' + String(index + 1).padStart(2, '0') + ' ', pal.accent, 'bold')
+      : colorizeTheme(' ' + String(index + 1).padStart(2, '0') + ' ', pal.section, 'bold');
 
     if (style === 'card') {
-      frame.push(edge + ' ' + badge + ' ' + colorize(lines[0], tone, selected ? 'bold' : ''));
+      frame.push(edge + ' ' + badge + ' ' + colorizeTheme(truncateLine(lines[0] || '', CARD_LABEL_MAX), tone, selected ? 'bold' : ''));
       for (let lineIndex = 1; lineIndex < lines.length; lineIndex += 1) {
-        frame.push('  ' + colorize('│', selected ? 'mint' : 'slate') + ' ' + colorize(lines[lineIndex], 'slate'));
+        frame.push('  ' + colorizeTheme('│', selected ? pal.accent : pal.muted) + ' ' + colorizeTheme(truncateLine(lines[lineIndex], CARD_LABEL_MAX), pal.muted));
       }
-      frame.push('  ' + colorize('└────────────────────────────────────', selected ? 'mint' : 'slate'));
+      frame.push('  ' + colorizeTheme('└────────────────────────────────────', selected ? pal.accent : pal.muted));
       frame.push('');
       return;
     }
 
-    frame.push(edge + ' ' + badge + ' ' + colorize(lines[0], tone, selected ? 'bold' : ''));
+    frame.push(edge + ' ' + badge + ' ' + colorizeTheme(truncateLine(lines[0] || '', 40), tone, selected ? 'bold' : ''));
     for (let lineIndex = 1; lineIndex < lines.length; lineIndex += 1) {
-      frame.push('    ' + colorize(lines[lineIndex], 'slate'));
+      frame.push('    ' + colorizeTheme(truncateLine(lines[lineIndex], 40), pal.muted));
     }
   });
 
   frame.push('');
   writeInteractiveFrame(frame);
+}
+
+/** Truncate a line to maxLen chars, appending … if it exceeds. */
+function truncateLine(str, maxLen) {
+  if (!str || str.length <= maxLen) return str || '';
+  return str.slice(0, Math.max(0, maxLen - 1)) + '…';
 }
 function computeRenderLines({
   options,
@@ -1261,24 +1593,25 @@ function renderDirectoryNavigatorScreen({
   emptyMessage,
   locale = getDefaultLocale(),
 }) {
+  const pal = resolveThemePalette();
   const pageItems = getCurrentPage(entries, pageIndex, pageSize);
   const totalPages = Math.max(1, Math.ceil(entries.length / pageSize));
 
   const lines = [
-    colorize('╭──────────────────────────────────────╮', 'steel'),
-    colorize('│ ' + title.padEnd(36, ' ') + ' │', 'ice', 'bold'),
-    colorize('╰──────────────────────────────────────╯', 'steel'),
-    colorize(t(locale, 'prompt.navigator.controls', '  ↑/↓ mover  ·  Enter/→ entrar  ·  Esc/← subir  ·  Ctrl+G usar ruta'), 'slate'),
-    colorize(t(locale, 'prompt.navigator.currentPath', '  Ruta actual  {path}', { path: currentPath }), 'slate'),
-    colorize(t(locale, 'prompt.navigator.page', '  Pagina {page}/{total}', { page: pageIndex + 1, total: totalPages }), 'slate'),
+    colorizeTheme('╭──────────────────────────────────────╮', pal.section),
+    colorizeTheme('│ ' + title.padEnd(36, ' ') + ' │', pal.title, 'bold'),
+    colorizeTheme('╰──────────────────────────────────────╯', pal.section),
+    colorizeTheme(t(locale, 'prompt.navigator.controls', '  ↑/↓ mover  ·  Enter/→ entrar  ·  Esc/← subir  ·  Ctrl+G usar ruta'), pal.muted),
+    colorizeTheme(t(locale, 'prompt.navigator.currentPath', '  Ruta actual  {path}', { path: currentPath }), pal.muted),
+    colorizeTheme(t(locale, 'prompt.navigator.page', '  Pagina {page}/{total}', { page: pageIndex + 1, total: totalPages }), pal.muted),
   ];
   if (typed) {
-    lines.push(colorize(t(locale, 'prompt.common.activeFilter', '  Filtro activo  {value}', { value: typed }), 'steel'));
+    lines.push(colorizeTheme(t(locale, 'prompt.common.activeFilter', '  Filtro activo  {value}', { value: typed }), pal.section));
   }
   lines.push('');
 
   if (!pageItems.length) {
-    lines.push(colorize('  ' + emptyMessage, 'amber'));
+    lines.push(colorizeTheme('  ' + emptyMessage, pal.warn));
     lines.push('');
     writeInteractiveFrame(lines);
     return;
@@ -1286,17 +1619,17 @@ function renderDirectoryNavigatorScreen({
 
   pageItems.forEach((entry, index) => {
     const isSelected = index === selectedIndex;
-    const tone = isSelected ? 'ice' : 'white';
-    const edge = isSelected ? colorize('▌', 'mint', 'bold') : colorize('·', 'slate');
+    const tone = isSelected ? pal.title : pal.text;
+    const edge = isSelected ? colorizeTheme('▌', pal.accent, 'bold') : colorizeTheme('·', pal.muted);
     const badge = isSelected
-      ? colorize(' ' + String(index + 1).padStart(2, '0') + ' ', 'mint', 'bold')
-      : colorize(' ' + String(index + 1).padStart(2, '0') + ' ', 'steel', 'bold');
+      ? colorizeTheme(' ' + String(index + 1).padStart(2, '0') + ' ', pal.accent, 'bold')
+      : colorizeTheme(' ' + String(index + 1).padStart(2, '0') + ' ', pal.section, 'bold');
 
-    lines.push(edge + ' ' + badge + ' ' + colorize(resolvePromptToken(entry.label, locale), tone, isSelected ? 'bold' : ''));
+    lines.push(edge + ' ' + badge + ' ' + colorizeTheme(resolvePromptToken(entry.label, locale), tone, isSelected ? 'bold' : ''));
     for (const line of entry.lines || []) {
-      lines.push('  ' + colorize('│', isSelected ? 'mint' : 'slate') + ' ' + colorize(resolvePromptToken(line, locale), 'slate'));
+      lines.push('  ' + colorizeTheme('│', isSelected ? pal.accent : pal.muted) + ' ' + colorizeTheme(resolvePromptToken(line, locale), pal.muted));
     }
-    lines.push('  ' + colorize('└────────────────────────────────────', isSelected ? 'mint' : 'slate'));
+    lines.push('  ' + colorizeTheme('└────────────────────────────────────', isSelected ? pal.accent : pal.muted));
     lines.push('');
   });
 
@@ -1319,8 +1652,7 @@ function formatStatus(enabled, locale = getDefaultLocale()) {
     return text;
   }
 
-  const color = enabled ? 'green' : 'red';
-  return colorize(text, color, 'bold');
+  return colorizeTheme(text, enabled ? 'mint' : 'red', 'bold');
 }
 
 function formatPromptPosition(position, locale = getDefaultLocale()) {

@@ -1,13 +1,24 @@
+import fs from 'node:fs/promises';
 import { parseArgs, normalizeParsedArgs } from '../core/args.js';
 import { findHelpCommand } from '../core/help.js';
 import { printHelp, printProjectContextLine, setOutputPreferences } from '../ui/output.js';
 import { createExecutionContext, getProjectBadgeLine, pickCommandCandidate, shouldPrintProjectBadge } from '../core/command-runtime.js';
 import { runRegisteredCommand } from '../core/command-registry.js';
 import { checkAndUpdateSystem } from '../commands/update.js';
+import { showWelcomeIfFirstRun } from '../commands/welcome.js';
+import { getUserConfigPath } from '../core/config.js';
 
 export async function main(argv = process.argv.slice(2)) {
+  let freshInstall = false;
+  try {
+    await fs.stat(getUserConfigPath());
+  } catch {
+    freshInstall = true;
+  }
+
   const parsed = normalizeParsedArgs(parseArgs(argv));
   const executionContext = await createExecutionContext({ argv, parsed });
+  executionContext.freshInstall = freshInstall;
 
   await checkAndUpdateSystem(executionContext);
 
@@ -39,6 +50,7 @@ export async function main(argv = process.argv.slice(2)) {
   }
 
   if (!argv.length) {
+    await showWelcomeIfFirstRun(executionContext);
     printHelp(executionContext.platformMode);
     return;
   }

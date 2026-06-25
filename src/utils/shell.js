@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import { constants as fsConstants } from 'node:fs';
 import path from 'node:path';
 import { isHostTermux } from './platform.js';
 
@@ -8,6 +9,14 @@ const TERMUX_SH = '/data/data/com.termux/files/usr/bin/sh';
 const LINUX_ZSH = '/bin/zsh';
 const LINUX_BASH = '/bin/bash';
 const LINUX_SH = '/bin/sh';
+const ALLOWED_SHELLS = new Set([
+  TERMUX_ZSH,
+  TERMUX_BASH,
+  TERMUX_SH,
+  LINUX_ZSH,
+  LINUX_BASH,
+  LINUX_SH,
+]);
 
 export async function resolveInteractiveShell(platformMode = '') {
   const preferredShell = process.env.XZP_PREFERRED_SHELL || process.env.SHELL || '';
@@ -36,8 +45,9 @@ export async function resolveInteractiveShell(platformMode = '') {
 
 function buildShellCandidates(preferredShell, platformMode = '') {
   const shellName = path.basename(preferredShell || '');
-  const preferredFirst = preferredShell && shellName && shellName !== 'sh'
-    ? [preferredShell]
+  const safePreferredShell = ALLOWED_SHELLS.has(preferredShell) ? preferredShell : '';
+  const preferredFirst = safePreferredShell && shellName && shellName !== 'sh'
+    ? [safePreferredShell]
     : [];
   const preferTermuxShells = platformMode ? platformMode !== 'linux' : isHostTermux();
 
@@ -48,7 +58,7 @@ function buildShellCandidates(preferredShell, platformMode = '') {
       TERMUX_BASH,
       LINUX_ZSH,
       LINUX_BASH,
-      preferredShell,
+      safePreferredShell,
       TERMUX_SH,
       LINUX_SH,
     ]);
@@ -58,7 +68,7 @@ function buildShellCandidates(preferredShell, platformMode = '') {
     ...preferredFirst,
     LINUX_ZSH,
     LINUX_BASH,
-    preferredShell,
+    safePreferredShell,
     LINUX_SH,
     TERMUX_ZSH,
     TERMUX_BASH,
@@ -66,9 +76,17 @@ function buildShellCandidates(preferredShell, platformMode = '') {
   ]);
 }
 
+export function __testBuildShellCandidates(preferredShell, platformMode = '') {
+  return buildShellCandidates(preferredShell, platformMode);
+}
+
 async function shellExists(shellPath) {
+  if (!ALLOWED_SHELLS.has(shellPath)) {
+    return false;
+  }
+
   try {
-    await fs.access(shellPath);
+    await fs.access(shellPath, fsConstants.X_OK);
     return true;
   } catch {
     return false;

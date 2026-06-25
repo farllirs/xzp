@@ -32,7 +32,21 @@ export async function runSearchCommand({
   const locale = config.ui?.locale || 'co_es';
   const platformMode = resolvePlatformMode(config);
   const scopeOptions = getScopeOptions(platformMode);
-  const selectedScope = scope || (agentMode ? 'actual' : process.stdin.isTTY ? await chooseSearchScope(scopeOptions, locale) : 'actual');
+  let selectedScope = scope;
+  if (!selectedScope) {
+    if (agentMode) {
+      selectedScope = 'actual';
+    } else if (process.stdin.isTTY) {
+      try {
+        selectedScope = await chooseSearchScope(scopeOptions, locale);
+      } catch (err) {
+        // Fallback robusto si el prompt interactivo falla (evita bloqueos)
+        selectedScope = 'actual';
+      }
+    } else {
+      selectedScope = 'actual';
+    }
+  }
   const root = resolveScopeRoot(selectedScope, scopeOptions);
   const persistedExcludes = await listSearchExcludePatterns();
   const effectiveExcludes = [...new Set([

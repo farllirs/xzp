@@ -94,6 +94,21 @@ const INSPECT_FILES = [
   'Makefile',
 ];
 
+const VERSION_COMMAND_MAP = {
+  go: ['version'],
+  rustc: ['--version'],
+  cargo: ['--version'],
+  node: ['--version'],
+  npm: ['--version'],
+  python: ['--version'],
+  python3: ['--version'],
+  pip: ['--version'],
+  pip3: ['--version'],
+  php: ['--version'],
+  ruby: ['--version'],
+  java: ['--version'],
+};
+
 export async function gatherDoctorReport() {
   const config = await loadUserConfig();
   const platformMode = resolvePlatformMode(config);
@@ -471,13 +486,16 @@ function requireFsSync(targetPath) {
   return nodeFs.existsSync(targetPath);
 }
 
-export async function readCommandVersion(commandPath, args = ['--version']) {
+export async function readCommandVersion(commandPath, args) {
   if (!commandPath) {
     return '';
   }
 
+  const cmdName = path.basename(commandPath).replace(/\.(exe|cmd|bat)$/i, '');
+  const finalArgs = args || VERSION_COMMAND_MAP[cmdName] || ['--version'];
+
   return await new Promise((resolve) => {
-    const child = spawn(commandPath, args, {
+    const child = spawn(commandPath, finalArgs, {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 

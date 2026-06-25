@@ -117,7 +117,7 @@ export async function runAndroidShellCommand(parsed = {}) {
 }
 
 async function resolveNavigatorStartPath(quickAccessRoot, requestedPath = '') {
-  const fallbackPath = quickAccessRoot;
+  const fallbackPath = await normalizeExistingDirectory(quickAccessRoot).catch(() => quickAccessRoot);
   const normalizedRequestedPath = String(requestedPath || '').trim();
 
   if (!normalizedRequestedPath) {
@@ -125,14 +125,27 @@ async function resolveNavigatorStartPath(quickAccessRoot, requestedPath = '') {
   }
 
   try {
-    const stats = await fs.stat(normalizedRequestedPath);
-    if (stats.isDirectory()) {
-      return normalizedRequestedPath;
+    const requestedRealPath = await normalizeExistingDirectory(normalizedRequestedPath);
+    if (isSameOrNestedPath(requestedRealPath, fallbackPath)) {
+      return requestedRealPath;
     }
   } catch {
   }
 
   return fallbackPath;
+}
+
+async function normalizeExistingDirectory(targetPath) {
+  const stats = await fs.stat(targetPath);
+  if (!stats.isDirectory()) {
+    throw new Error('not-directory');
+  }
+
+  return fs.realpath(targetPath);
+}
+
+function isSameOrNestedPath(targetPath, parentPath) {
+  return targetPath === parentPath || targetPath.startsWith(parentPath + '/');
 }
 
 async function resolveAndroidInteractiveShell(platformMode) {

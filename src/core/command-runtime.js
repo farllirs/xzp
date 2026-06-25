@@ -9,13 +9,14 @@ export async function createExecutionContext({ argv, parsed }) {
   const runtimePreferences = resolveRuntimePreferences(config);
   const platformMode = resolvePlatformMode(config);
 
+  const outputFormat = parsed.outputFormat || runtimePreferences.outputFormat;
   return {
     argv: [...(argv || [])],
     parsed,
     config,
     runtimePreferences,
     platformMode,
-    outputFormat: runtimePreferences.outputFormat,
+    outputFormat,
     agentMode: parsed.agentMode || runtimePreferences.agentMode,
   };
 }
@@ -40,6 +41,7 @@ export function isStandaloneView(parsed = {}) {
   return parsed.help
     || parsed.command === 'doctor'
     || parsed.command === 'inspect'
+    || parsed.command === 'visual-test'
     || isSafeShortcutMaintenance;
 }
 

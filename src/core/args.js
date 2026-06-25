@@ -33,6 +33,7 @@ export function parseArgs(argv) {
     androidStartPath: '',
     androidPickOnly: false,
     localeValue: '',
+    outputFormat: '',
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -100,8 +101,19 @@ export function parseArgs(argv) {
       continue;
     }
 
+    if (token === '--generate-context' || token === 'generate' || token === 'generar') {
+      parsed.command = 'agent-mode';
+      parsed.agentAction = 'refresh-context';
+      continue;
+    }
+
     if (token === '-D' || token === '--doctor' || token === 'doctor') {
       parsed.command = 'doctor';
+      continue;
+    }
+
+    if (token === '--diagnose' || token === 'diagnose' || token === 'test' || token === 'health' || token === 'check') {
+      parsed.command = 'diagnose';
       continue;
     }
 
@@ -112,6 +124,11 @@ export function parseArgs(argv) {
 
     if (token === '--report-error' || token === 'report-error') {
       parsed.command = 'report-error';
+      continue;
+    }
+
+    if (token === '--visual-test' || token === 'visual-test' || token === 'test-visual') {
+      parsed.command = 'visual-test';
       continue;
     }
 
@@ -368,7 +385,7 @@ export function parseArgs(argv) {
     }
 
     if (token === '--json') {
-      parsed.copyMode = 'json';
+      parsed.outputFormat = 'json';
       continue;
     }
 
@@ -523,5 +540,6 @@ export function normalizeParsedArgs(parsed = {}) {
       ? parsed.searchExcludes.map((item) => String(item || '').trim()).filter(Boolean)
       : [],
     treeCompareTarget: String(parsed.treeCompareTarget || '').trim(),
+    outputFormat: String(parsed.outputFormat || '').trim().toLowerCase(),
   };
 }

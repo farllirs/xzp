@@ -1283,10 +1283,24 @@ function getSafeProjectWorkspacePath(projectRoot, projectType) {
 }
 
 async function syncProjectToSafeWorkspace(projectRoot, safeProjectDir, projectType) {
+  await assertSafeWorkspaceOutsideProject(projectRoot, safeProjectDir);
   await fs.mkdir(safeProjectDir, { recursive: true });
   await resetDirectoryContents(safeProjectDir);
   await copyDirectoryRecursive(projectRoot, safeProjectDir);
   await writeSafeWorkspaceMeta(safeProjectDir, projectRoot, projectType);
+}
+
+async function assertSafeWorkspaceOutsideProject(projectRoot, safeProjectDir) {
+  const sourceRoot = await normalizeComparablePath(projectRoot);
+  const targetRoot = path.resolve(safeProjectDir);
+
+  if (targetRoot === sourceRoot || targetRoot.startsWith(sourceRoot + path.sep)) {
+    throw new Error('El espacio seguro no puede crearse dentro del proyecto porque provocaria una copia recursiva. Ajusta HOME o usa una ruta fuera del proyecto.');
+  }
+}
+
+export async function __testAssertSafeWorkspaceOutsideProject(projectRoot, safeProjectDir) {
+  return assertSafeWorkspaceOutsideProject(projectRoot, safeProjectDir);
 }
 
 async function resetDirectoryContents(targetDir) {
@@ -1346,6 +1360,7 @@ async function copyDirectoryRecursive(sourceDir, targetDir) {
 
 function shouldSkipSafeCopy(name) {
   return name === '.git'
+    || name === '.xzp'
     || name === '.gradle'
     || name === '.idea'
     || name === '.vscode'
@@ -1361,6 +1376,14 @@ function shouldSkipSafeCopy(name) {
     || name === 'dist'
     || name === 'build'
     || name === 'bin';
+}
+
+async function normalizeComparablePath(targetPath) {
+  try {
+    return await fs.realpath(targetPath);
+  } catch {
+    return path.resolve(targetPath);
+  }
 }
 
 function detectLockfile(projectType, entries = []) {

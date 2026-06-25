@@ -15,6 +15,9 @@ import { runSafeShellCommand } from '../commands/safe-shell.js';
 import { runSearchCommand } from '../commands/search.js';
 import { runTreeCommand } from '../commands/tree.js';
 import { runVersionCommand } from '../commands/version.js';
+import { runVisualTestCommand } from '../commands/visual-test.js';
+import { runDiagnoseCommand } from '../commands/diagnose.js';
+import { runThemeStudio } from '../commands/theme-studio.js';
 import { buildCommandOptions } from './command-runtime.js';
 
 const COMMAND_REGISTRY = [
@@ -37,6 +40,15 @@ const COMMAND_REGISTRY = [
   {
     name: 'report-error',
     run: (context) => runReportErrorCommand(buildCommandOptions(context)),
+  },
+  {
+    name: 'visual-test',
+    run: (context) => runVisualTestCommand(buildCommandOptions(context)),
+  },
+  {
+    name: 'diagnose',
+    aliases: ['test', 'health', 'check'],
+    run: (context) => runDiagnoseCommand(buildCommandOptions(context)),
   },
   {
     name: 'copy',
@@ -102,6 +114,11 @@ const COMMAND_REGISTRY = [
     name: 'safe-shell',
     run: (context) => runSafeShellCommand(buildCommandOptions(context)),
   },
+  {
+    name: 'theme-studio',
+    aliases: ['themes', 'theme', 'personalizar'],
+    run: (context) => runThemeStudio(context),
+  },
 ];
 
 export function listRegisteredCommands() {
@@ -109,7 +126,12 @@ export function listRegisteredCommands() {
 }
 
 export function getRegisteredCommand(name = '') {
-  return COMMAND_REGISTRY.find((command) => command.name === name) || null;
+  const lowerName = name.toLowerCase();
+  return COMMAND_REGISTRY.find((command) => {
+    if (command.name === lowerName) return true;
+    if (command.aliases && command.aliases.includes(lowerName)) return true;
+    return false;
+  }) || null;
 }
 
 export async function runRegisteredCommand(name, context) {

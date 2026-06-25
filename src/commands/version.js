@@ -250,11 +250,9 @@ function buildReleasePlan(localVersion, remoteVersion) {
   }
 
   return {
-    type: channel === 'stable' ? 'patch' : 'prerelease',
-    recommendedVersion: recommendNextBump(localVersion, remoteVersion, channel === 'stable' ? 'patch' : 'prerelease'),
-    criteria: comparison > 0
-      ? 'local va por delante: publicar cuando changelog y pruebas esten cerrados'
-      : 'revisar diferencias antes de liberar',
+    type: 'publish',
+    recommendedVersion: localVersion,
+    criteria: 'local va por delante: publicar esta version cuando changelog y pruebas esten cerrados',
   };
 }
 

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { getHomeDirectory, normalizePlatformMode } from '../utils/platform.js';
 import { getDefaultLocale, normalizeLocale } from './i18n.js';
 
-const CONFIG_SCHEMA_VERSION = 2;
+const CONFIG_SCHEMA_VERSION = 3;
 const DEFAULT_SEARCH_EXCLUDES = [
   '.git',
   'node_modules',
@@ -23,6 +23,25 @@ const DEFAULT_CONFIG = {
     androidShortcut: true,
     projectBadge: true,
     smartProjectInstall: false,
+  },
+  android: {
+    enabledQuickAccess: [
+      "shared",
+      "downloads",
+      "dcim",
+      "documents",
+      "pictures",
+      "screenshots",
+      "termux-home"
+    ],
+    showFileSizes: true,
+    showModifiedDate: true,
+    showFileType: true,
+    defaultStartPath: "shared",
+    persistLastLocation: true,
+    integrateWithAgent: true,
+    navigatorDensity: "comfortable",
+    allowExternalVolumes: true
   },
   shortcuts: {
     safe: {},
@@ -49,6 +68,11 @@ const DEFAULT_CONFIG = {
     locale: getDefaultLocale(),
     promptContextPosition: 'right',
     promptTheme: 'ocean',
+    visualTheme: 'panels',
+    colorMode: 'default',
+    customColors: null,
+    gridColumns: 0,
+    gridRows: 3,
   },
   runtime: {
     platformMode: 'auto',
@@ -135,6 +159,17 @@ export async function setPromptTheme(theme) {
     ui: {
       ...config.ui,
       promptTheme: normalizePromptTheme(theme),
+    },
+  });
+}
+
+export async function setVisualTheme(theme) {
+  const config = await loadUserConfig();
+  return saveUserConfig({
+    ...config,
+    ui: {
+      ...config.ui,
+      visualTheme: normalizeVisualTheme(theme),
     },
   });
 }
@@ -429,15 +464,21 @@ export function resolveRuntimePreferences(config = {}) {
   const requestedOutputFormat = readStringEnv('XZP_OUTPUT_FORMAT');
   return {
     theme: normalizeUiTheme(readStringEnv('XZP_THEME') || config.ui?.theme),
+    visualTheme: normalizeVisualTheme(readStringEnv('XZP_VISUAL_THEME') || config.ui?.visualTheme),
     density: normalizeUiDensity(readStringEnv('XZP_UI_DENSITY') || config.ui?.density),
     locale: normalizeLocale(readStringEnv('XZP_LOCALE') || config.ui?.locale),
     noColor: readBooleanEnv('XZP_NO_COLOR', false),
     outputFormat: normalizeOutputFormat(
-      requestedOutputFormat || (agentMode ? 'json' : config.runtime?.outputFormat || DEFAULT_CONFIG.runtime.outputFormat),
+      requestedOutputFormat || (agentMode && !process.stdout.isTTY ? 'json' : config.runtime?.outputFormat || DEFAULT_CONFIG.runtime.outputFormat),
     ),
     debug: readBooleanEnv('XZP_DEBUG', Boolean(config.runtime?.debug)),
     experimental: readBooleanEnv('XZP_EXPERIMENTAL', Boolean(config.runtime?.experimental)),
     agentMode,
+    customColors: config.ui?.customColors || null,
+    gridColumns: config.ui?.gridColumns || 0,
+    gridRows: config.ui?.gridRows || 3,
+    promptTheme: config.ui?.promptTheme || 'ocean',
+    promptContextPosition: config.ui?.promptContextPosition || 'right',
   };
 }
 
@@ -457,6 +498,12 @@ function mergeConfig(config) {
     features: {
       ...DEFAULT_CONFIG.features,
       ...(migrated.features || {}),
+    },
+    android: {
+      ...DEFAULT_CONFIG.android,
+      ...(migrated.android || {}),
+      enabledQuickAccess: normalizeAndroidQuickAccess((migrated.android || {}).enabledQuickAccess),
+      navigatorDensity: normalizeAndroidDensity((migrated.android || {}).navigatorDensity),
     },
     shortcuts: {
       ...DEFAULT_CONFIG.shortcuts,
@@ -502,6 +549,7 @@ function mergeConfig(config) {
       ...DEFAULT_CONFIG.ui,
       ...(migrated.ui || {}),
       theme: normalizeUiTheme(migrated.ui?.theme),
+      visualTheme: normalizeVisualTheme(migrated.ui?.visualTheme),
       density: normalizeUiDensity(migrated.ui?.density),
       locale: normalizeLocale(migrated.ui?.locale),
       promptContextPosition: normalizePromptContextPosition(migrated.ui?.promptContextPosition),
@@ -554,6 +602,13 @@ function migrateRawConfig(rawConfig = {}) {
     next.menu = { visualMode: 'cards', lastAction: '' };
   }
 
+  // Schema v2 → v3: force new default visualTheme ('panels')
+  if ((rawConfig.schemaVersion || 0) < 3) {
+    if (next.ui && typeof next.ui === 'object') {
+      delete next.ui.visualTheme;
+    }
+  }
+
   next.schemaVersion = CONFIG_SCHEMA_VERSION;
   return next;
 }
@@ -573,6 +628,11 @@ function normalizePromptContextPosition(position) {
 function normalizeUiTheme(theme) {
   const normalized = String(theme || '').trim().toLowerCase();
   return ['ocean', 'forest', 'ember', 'mono', 'paper', 'contrast'].includes(normalized) ? normalized : DEFAULT_CONFIG.ui.theme;
+}
+
+function normalizeVisualTheme(theme) {
+  const normalized = String(theme || '').trim().toLowerCase();
+  return ['classic', 'panels', 'minimal'].includes(normalized) ? normalized : DEFAULT_CONFIG.ui.visualTheme;
 }
 
 function normalizeUiDensity(density) {
@@ -673,4 +733,52 @@ export function __testMergeConfig(config = {}) {
 
 export function __testNormalizeOutputFormat(value) {
   return normalizeOutputFormat(value);
+}
+
+function normalizeAndroidQuickAccess(accessList) {
+  if (!Array.isArray(accessList)) return [...DEFAULT_CONFIG.android.enabledQuickAccess];
+  const validKeys = ['shared', 'downloads', 'dcim', 'documents', 'pictures', 'screenshots', 'termux-home', 'music', 'movies'];
+  return [...new Set(accessList.filter(k => validKeys.includes(k)))];
+}
+
+function normalizeAndroidDensity(density) {
+  return density === 'compact' ? 'compact' : 'comfortable';
+}
+
+// ==================== ANDROID CONFIG HELPERS ====================
+
+export async function getAndroidConfig() {
+  const config = await loadUserConfig();
+  return config.android || DEFAULT_CONFIG.android;
+}
+
+export async function setAndroidSetting(key, value) {
+  const config = await loadUserConfig();
+  if (!config.android) config.android = { ...DEFAULT_CONFIG.android };
+  config.android[key] = value;
+  await saveUserConfig(config);
+  return config.android;
+}
+
+export async function toggleAndroidQuickAccess(accessKey) {
+  const config = await loadUserConfig();
+  if (!config.android) config.android = { ...DEFAULT_CONFIG.android };
+  
+  const current = config.android.enabledQuickAccess || [];
+  const index = current.indexOf(accessKey);
+  
+  if (index > -1) {
+    current.splice(index, 1);
+  } else {
+    current.push(accessKey);
+  }
+  
+  config.android.enabledQuickAccess = current;
+  await saveUserConfig(config);
+  return current;
+}
+
+export async function isAndroidQuickAccessEnabled(accessKey) {
+  const androidConfig = await getAndroidConfig();
+  return (androidConfig.enabledQuickAccess || []).includes(accessKey);
 }

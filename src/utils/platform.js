@@ -178,17 +178,23 @@ export function getBridgeDirectory() {
 }
 
 export async function getLinuxDistroRoots() {
-  const prefix = '/data/data/com.termux/files/usr';
-  const prootPath = path.join(prefix, 'var', 'lib', 'proot-distro', 'installed-rootfs');
+  const prootPath = process.env.XZP_PROOT_ROOTFS
+    || path.join('/data/data/com.termux/files/usr', 'var', 'lib', 'proot-distro', 'installed-rootfs');
   
   try {
     const entries = await fs.promises.readdir(prootPath, { withFileTypes: true });
     return entries
-      .filter(e => e.isDirectory())
-      .map(e => ({
-        name: e.name,
-        path: path.join(prootPath, e.name)
-      }));
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => {
+        const rootfsPath = path.join(prootPath, entry.name);
+        const rootHomePath = path.join(rootfsPath, 'root');
+        return {
+          name: entry.name,
+          path: fs.existsSync(rootHomePath) ? rootHomePath : rootfsPath,
+          rootfsPath,
+        };
+      })
+      .sort((left, right) => left.name.localeCompare(right.name, 'es', { sensitivity: 'base' }));
   } catch {
     return [];
   }

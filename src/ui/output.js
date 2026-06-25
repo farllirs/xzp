@@ -4,6 +4,7 @@ import { getScopeOptions } from '../core/scopes.js';
 import { findHelpCommand, listHelpCommands } from '../core/help.js';
 import { getDefaultLocale, t, tList } from '../core/i18n.js';
 import { isHostTermux } from '../utils/platform.js';
+import { resolvePalette, getThemeOrDefault } from './themes/index.js';
 
 const ANSI = {
   bold: '\x1b[1m',
@@ -22,9 +23,15 @@ const ANSI = {
 
 const OUTPUT_PREFERENCES = {
   theme: 'ocean',
+  visualTheme: 'panels',
   density: 'comfortable',
   noColor: false,
   locale: getDefaultLocale(),
+  customColors: null,
+  gridColumns: 0,    // 0 = auto
+  gridRows: 3,
+  promptTheme: 'ocean',
+  promptContextPosition: 'right',
 };
 
 const THEME_PALETTES = {
@@ -98,13 +105,27 @@ const THEME_PALETTES = {
 
 export function setOutputPreferences(preferences = {}) {
   OUTPUT_PREFERENCES.theme = preferences.theme || OUTPUT_PREFERENCES.theme;
+  OUTPUT_PREFERENCES.visualTheme = preferences.visualTheme || OUTPUT_PREFERENCES.visualTheme;
   OUTPUT_PREFERENCES.density = preferences.density || OUTPUT_PREFERENCES.density;
   OUTPUT_PREFERENCES.noColor = Boolean(preferences.noColor);
   OUTPUT_PREFERENCES.locale = preferences.locale || OUTPUT_PREFERENCES.locale;
+  if (preferences.customColors !== undefined) OUTPUT_PREFERENCES.customColors = preferences.customColors;
+  if (preferences.gridColumns !== undefined) OUTPUT_PREFERENCES.gridColumns = preferences.gridColumns;
+  if (preferences.gridRows !== undefined) OUTPUT_PREFERENCES.gridRows = preferences.gridRows;
+  if (preferences.promptTheme !== undefined) OUTPUT_PREFERENCES.promptTheme = preferences.promptTheme;
+  if (preferences.promptContextPosition !== undefined) OUTPUT_PREFERENCES.promptContextPosition = preferences.promptContextPosition;
 }
 
 export function getOutputLocale() {
   return OUTPUT_PREFERENCES.locale || getDefaultLocale();
+}
+
+export function getActiveVisualTheme() {
+  return OUTPUT_PREFERENCES.visualTheme;
+}
+
+export function getOutputPreferences() {
+  return { ...OUTPUT_PREFERENCES };
 }
 
 export function printHelp(platformMode = '', topic = '') {
@@ -301,7 +322,31 @@ function dim(text) {
   return ANSI.dim + text + ANSI.reset;
 }
 
-function colorize(text, color, weight = '') {
+export function supportsColor() {
+  return process.stdout.isTTY && !OUTPUT_PREFERENCES.noColor;
+}
+
+export function resolveThemePalette() {
+  const basePalette = THEME_PALETTES[OUTPUT_PREFERENCES.theme] || THEME_PALETTES.ocean;
+  const visualTheme = getThemeOrDefault(OUTPUT_PREFERENCES.visualTheme);
+  const merged = {
+    ...visualTheme.palette,
+    ...basePalette,
+  };
+
+  // Apply custom color overrides from user preferences
+  if (OUTPUT_PREFERENCES.customColors && typeof OUTPUT_PREFERENCES.customColors === 'object') {
+    for (const [role, ansiCode] of Object.entries(OUTPUT_PREFERENCES.customColors)) {
+      if (ansiCode && typeof ansiCode === 'string') {
+        merged[role] = ansiCode;
+      }
+    }
+  }
+
+  return merged;
+}
+
+export function colorize(text, color, weight = '') {
   if (!supportsColor()) {
     return text;
   }
@@ -310,19 +355,17 @@ function colorize(text, color, weight = '') {
   if (weight && ANSI[weight]) {
     parts.push(ANSI[weight]);
   }
-  if (color && ANSI[color]) {
-    parts.push(ANSI[color]);
+  if (color) {
+    if (ANSI[color]) {
+      // Named color (e.g. 'ice', 'steel')
+      parts.push(ANSI[color]);
+    } else if (typeof color === 'string' && /^38;5;\d+$/.test(color)) {
+      // Direct ANSI 256 code (e.g. '38;5;196')
+      parts.push(`\x1b[${color}m`);
+    }
   }
   parts.push(text, ANSI.reset);
   return parts.join('');
-}
-
-function supportsColor() {
-  return process.stdout.isTTY && !OUTPUT_PREFERENCES.noColor;
-}
-
-function resolveThemePalette() {
-  return THEME_PALETTES[OUTPUT_PREFERENCES.theme] || THEME_PALETTES.ocean;
 }
 
 function printGap() {
